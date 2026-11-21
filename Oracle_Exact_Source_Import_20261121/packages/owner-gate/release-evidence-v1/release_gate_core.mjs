@@ -4,6 +4,7 @@
  * No attestation writer, deployer, command dispatcher or executable grants here.
  */
 import {PIN,SCHEMA,OWNER_DOMAIN,canonicalReleaseText,verifyReleaseEvidence} from './verify_release_approval_v1.mjs';
+import {FIRST_BASIS,FIRST_SCHEMA,FIRST_OWNER_DOMAIN,canonicalFirstText,validateFirstPolicy,verifyFirstPair,verifyRegisteredFirstReviewer} from './first_reviewer_protocol.mjs';
 export const ENROLL_DOMAIN='batcave.oracle.independent_nanny.enrollment.owner.v1\n';
 const UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 const HEX=/^[a-f0-9]{64}$/;
@@ -58,9 +59,10 @@ export function canonicalEnrollmentText(p){
  must(exact(p,'schema|owner_user_id|candidate_sha256|reviewer_key_sha256|host_identity_sha256|attestation_id|nonce|issued_at|expires_at'),'BAD_ENROLLMENT_PAYLOAD');
  return stableJson(p);
 }
-async function registered(repo,id,fp,now){
+async function registered(repo,id,fp,now,owner){
  const k=await repo.getReviewer(id,fp);
  must(k?.role==='independent_release_reviewer'&&k.owner_user_id===id&&k.registered===true&&k.revoked_at===null&&iso(k.valid_until)&&Date.parse(k.valid_until)>now,'INDEPENDENT_REVIEWER_NOT_ENROLLED');
+ if(k.trust_basis===FIRST_BASIS){await verifyRegisteredFirstReviewer({key:k,owner,record:k.owner_bootstrap_record,now});return k;}
  const a=await repo.getCustody(id,fp);
  must(a?.id===k.attestation_id&&custodyValid(a,id,fp,k.host_identity_sha256,now),'INDEPENDENT_CUSTODY_REQUIRED');
  must(k.independently_attested===true&&k.release_policy_version===a.release_policy_version&&k.private_key_custodian===a.private_key_custodian,'REGISTRATION_ATTESTATION_MISMATCH');
@@ -77,6 +79,32 @@ export async function handleReleaseGate(body,ctx,repo,now=Date.now()){
   must(body&&typeof body==='object'&&!Array.isArray(body)&&typeof body.action==='string','BAD_REQUEST');
   const id=ctx.owner_user_id,owner=await ownerKey(repo,id);
   const i=await intent(repo,now);
+  if(body.action==='oracle_first_reviewer_challenge_v1'){
+   must(exact(body,'action|candidate'),'BAD_REQUEST');
+   const record=await repo.getFirstPolicy(),policy=await validateFirstPolicy(record,{owner,now,requireUnused:true});
+   must(await repo.countExistingReviewers()===0,'FIRST_PRIVILEGED_REVIEWER_EXISTS');
+   const c=await candidate(body.candidate,owner);
+   must(c.record_sha256===policy.candidate_sha256&&c.host_identity_sha256===policy.host_identity_sha256&&body.candidate.public_key_sha256===policy.reviewer_key_sha256&&body.candidate.public_key_b64url===policy.reviewer_public_key_b64url,'FIRST_CANDIDATE_NOT_PINNED');
+   const issued_at=new Date(now).toISOString(),expires_at=new Date(Math.min(now+10*60000,Date.parse(i.valid_until),Date.parse(policy.signer_valid_until))).toISOString();
+   const nonce=Array.from(crypto.getRandomValues(new Uint8Array(16)),b=>b.toString(16).padStart(2,'0')).join('');
+   const payload={schema:FIRST_SCHEMA,scope:policy.scope,trust_basis:FIRST_BASIS,owner_user_id:id,owner_key_sha256:owner.public_key_sha256,reviewer_key_sha256:policy.reviewer_key_sha256,candidate_sha256:policy.candidate_sha256,host_identity_sha256:policy.host_identity_sha256,reviewer_sid:policy.reviewer_sid,custody_evidence_sha256:policy.custody_evidence_sha256,policy_sha256:record.policy_sha256,signer_valid_until:policy.signer_valid_until,nonce,issued_at,expires_at};
+   const ch=await repo.issueFirstChallenge({kind:'first_key',owner_user_id:id,owner_key_sha256:owner.public_key_sha256,reviewer_key_sha256:policy.reviewer_key_sha256,policy_sha256:record.policy_sha256,nonce,issued_at,expires_at,payload,payload_sha256:await hashText(stableJson(payload)),candidate:body.candidate});
+   must(UUID.test(ch?.id)&&ch.payload_sha256===await hashText(stableJson(payload))&&ch.owner_user_id===id&&ch.nonce===nonce,'CHALLENGE_NOT_RECORDED');
+   return {status:200,body:{...FLAGS,challenge_id:ch.id,payload,policy,policy_sha256:record.policy_sha256,signing_message:FIRST_OWNER_DOMAIN+canonicalFirstText(payload)}};
+  }
+  if(body.action==='oracle_first_reviewer_register_v1'){
+   must(exact(body,'action|challenge_id|owner_signature_b64url|proof_signature_b64url')&&UUID.test(body.challenge_id),'BAD_REQUEST');
+   const record=await repo.getFirstPolicy(),policy=await validateFirstPolicy(record,{owner,now,requireUnused:true});
+   must(await repo.countExistingReviewers()===0,'FIRST_PRIVILEGED_REVIEWER_EXISTS');
+   const ch=await repo.getFirstChallenge(id,body.challenge_id);
+   must(ch?.kind==='first_key'&&fresh(ch,now)&&ch.owner_user_id===id&&ch.owner_key_sha256===owner.public_key_sha256&&ch.policy_sha256===record.policy_sha256&&ch.reviewer_key_sha256===policy.reviewer_key_sha256,'CHALLENGE_NOT_FRESH');
+   const c=await candidate(ch.candidate,owner);
+   must(c.record_sha256===policy.candidate_sha256&&c.host_identity_sha256===policy.host_identity_sha256&&await hashText(stableJson(ch.payload))===ch.payload_sha256&&ch.payload.nonce===ch.nonce&&ch.payload.issued_at===ch.issued_at&&ch.payload.expires_at===ch.expires_at,'FIRST_RECEIPT_BINDING');
+   await verifyFirstPair({payload:ch.payload,record,owner,owner_signature_b64url:body.owner_signature_b64url,proof_signature_b64url:body.proof_signature_b64url,now});
+   const r=await repo.finishFirstVerified({challenge:ch,owner_signature_b64url:body.owner_signature_b64url,reviewer_signature_b64url:body.proof_signature_b64url});
+   must(r?.inserted===true,'FIRST_REPLAY_REVOKED_OR_STALE');
+   return {status:200,body:{...FLAGS,reviewer_registered:true,reviewer_public_key_sha256:policy.reviewer_key_sha256,trust_basis:FIRST_BASIS,independently_attested:false}};
+  }
   if(body.action==='oracle_release_enrollment_challenge_v1'){
    must(exact(body,'action|candidate'),'BAD_REQUEST');
    const c=await candidate(body.candidate,owner),fp=body.candidate.public_key_sha256;
@@ -103,12 +131,12 @@ export async function handleReleaseGate(body,ctx,repo,now=Date.now()){
   }
   if(body.action==='oracle_release_challenge_v1'){
    must(exact(body,'action|reviewer_public_key_sha256')&&HEX.test(body.reviewer_public_key_sha256),'BAD_REQUEST');
-   const k=await registered(repo,id,body.reviewer_public_key_sha256,now);
+   const k=await registered(repo,id,body.reviewer_public_key_sha256,now,owner);
    must(k.public_key_sha256!==owner.public_key_sha256&&k.public_key_sha256!==LAB_KEY&&k.public_key_sha256!==LAB_RAW_HASH&&k.public_key_b64url!==LAB_RAW_KEY,'REVIEWER_KEY_NOT_INDEPENDENT');
    const issued_at=new Date(now).toISOString(),expires_at=new Date(Math.min(now+10*60000,Date.parse(i.valid_until),Date.parse(k.valid_until))).toISOString();
    const nonce=Array.from(crypto.getRandomValues(new Uint8Array(16)),b=>b.toString(16).padStart(2,'0')).join('');
    const payload={...PIN,schema:SCHEMA,owner_user_id:id,nonce,issued_at,expires_at};
-   const ch=await newChallenge(repo,{kind:'release',owner_user_id:id,owner_key_sha256:owner.public_key_sha256,reviewer_key_sha256:k.public_key_sha256,attestation_id:k.attestation_id,nonce,issued_at,expires_at,payload,payload_sha256:await hashText(stableJson(payload)),candidate:null});
+   const ch=await newChallenge(repo,{kind:'release',first_root:k.trust_basis===FIRST_BASIS,policy_sha256:k.owner_bootstrap_record?.policy_sha256,owner_user_id:id,owner_key_sha256:owner.public_key_sha256,reviewer_key_sha256:k.public_key_sha256,attestation_id:k.attestation_id,nonce,issued_at,expires_at,payload,payload_sha256:await hashText(stableJson(payload)),candidate:null});
    return {status:200,body:{...FLAGS,challenge_id:ch.id,payload,signing_message:OWNER_DOMAIN+canonicalReleaseText(payload)}};
   }
   if(body.action==='oracle_release_record_evidence_v1'){
@@ -116,7 +144,7 @@ export async function handleReleaseGate(body,ctx,repo,now=Date.now()){
    const ch=await repo.getChallenge(id,body.challenge_id);
    must(ch?.kind==='release'&&fresh(ch,now)&&ch.owner_key_sha256===owner.public_key_sha256,'CHALLENGE_NOT_FRESH');
    must(await hashText(stableJson(ch.payload))===ch.payload_sha256&&ch.payload.nonce===ch.nonce&&ch.payload.owner_user_id===id,'CHALLENGE_BINDING_MISMATCH');
-   const k=await registered(repo,id,ch.reviewer_key_sha256,now);
+   const k=await registered(repo,id,ch.reviewer_key_sha256,now,owner);
    const verdict=await verifyReleaseEvidence({payload:ch.payload,owner_signature_b64url:body.owner_signature_b64url,nanny_signature_b64url:body.nanny_signature_b64url,authenticated_owner_id:id,trusted_owner_key:owner,trusted_nanny_key:k,nonce_issued_by_gate:true,nonce_consumed:false,now});
    const r=await repo.recordEvidence({challenge:ch,owner_signature_b64url:body.owner_signature_b64url,nanny_signature_b64url:body.nanny_signature_b64url,verdict});
    must(r?.inserted===true,'REPLAY_REVOKED_OR_STALE_EVIDENCE');

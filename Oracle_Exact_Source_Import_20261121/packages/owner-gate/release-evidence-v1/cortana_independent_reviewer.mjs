@@ -18,6 +18,7 @@ import {execFileSync} from 'node:child_process';
 import {stdin,stdout,stderr} from 'node:process';
 import {canonicalReleaseText,NANNY_DOMAIN,OWNER_DOMAIN,PIN,SCHEMA} from './verify_release_approval_v1.mjs';
 
+import {FIRST_OWNER_DOMAIN,FIRST_PROOF_DOMAIN,canonicalFirstText,firstStable,verifyFirstOwner} from './first_reviewer_protocol.mjs';
 const KEYFILE='private.encrypted.json';
 const PUBFILE='public.unenrolled.json';
 const SIGFILE='review.signature.json';
@@ -118,6 +119,35 @@ async function init(dir){ensureTTY();mkdirSync(dir,{recursive:true,mode:0o700});
  saveNew(join(dir,KEYFILE),keyRecord);saveNew(join(dir,PUBFILE),publicRecord);
  stdout.write(`CANDIDATE public fingerprint: ${publicRecord.public_key_sha256}\nPRIVATE key remains local. Status: UNENROLLED, NOT AUTHORIZED.\n`);
 }
+async function validateFirstBootstrapEnvelope(e,pub,ident,now=Date.now()){
+ if(e?.schema!=='batcave.oracle.first_reviewer.owner_endorsement.v1'||e.issuer!=='batcave-control'||typeof e.challenge_id!=='string')die('FIRST_OWNER_ENDORSEMENT_REQUIRED');
+ const record={policy:e.policy,policy_sha256:e.policy_sha256,registered_at:null,revoked_at:null};
+ const owner={owner_user_id:e.payload?.owner_user_id,public_key_b64url:OWNER_PUB_B64URL,public_key_sha256:OWNER_PUB_SHA256,revoked_at:null};
+ await verifyFirstOwner({payload:e.payload,record,owner,owner_signature_b64url:e.owner_signature_b64url,now});
+ if(pub.host_identity?.host!==ident.host||pub.host_identity?.os!==ident.os||pub.host_identity?.user!==ident.user)die('DIFFERENT_HOST_OR_ACCOUNT');
+ if(pub.schema!=='batcave.nanny.release.public_key.v1'||pub.role!=='independent_release_reviewer_CANDIDATE'||pub.registered!==false||pub.independently_attested!==false||pub.production_release_authorized!==false||sha(Buffer.from(firstStable(pub)))!==e.policy.candidate_sha256||sha(Buffer.from(firstStable(pub.host_identity)))!==e.policy.host_identity_sha256||pub.public_key_sha256!==e.policy.reviewer_key_sha256||pub.public_key_b64url!==e.policy.reviewer_public_key_b64url)die('FIRST_CANDIDATE_NOT_PINNED');
+ return e.payload;
+}
+async function proveFirstKey(dir,challengePath){
+ ensureTTY();const ident=ownerIdentity(),pub=loadJson(join(dir,PUBFILE)),env=loadJson(challengePath);
+ const p=await validateFirstBootstrapEnvelope(env,pub,ident);
+ if(ident.os!=='win32')die('PROTECTED_CORTANA_IDENTITY_REQUIRED');
+ const sid=execFileSync('whoami.exe',['/user','/fo','csv','/nh'],{encoding:'utf8',timeout:15000}).match(/S-1-5-21-\d+-\d+-\d+-\d+/)?.[0];
+ if(sid!==p.reviewer_sid)die('FIRST_REVIEWER_SID_MISMATCH');
+ stdout.write(`Owner-signed first-key enrollment ONLY\nReviewer: ${pub.public_key_sha256}\nAccount: ${ident.host} / ${ident.user}\nExpires: ${p.expires_at}\nPossession is not independent custody attestation or release approval.\n`);
+ if(!await promptExplicit('Prove possession of the existing encrypted key for this exact owner endorsement:',`PROVE FIRST KEY ${p.nonce.slice(-8)}`))die('NOT_CONFIRMED');
+ const pass=await promptSecret('Existing local reviewer passphrase (hidden): '),pkcs8=decryptPkcs8(loadJson(join(dir,KEYFILE)),pass);
+ let key;try{key=createPrivateKey({key:pkcs8,format:'der',type:'pkcs8'});}finally{pkcs8.fill(0);}
+ const raw=createPublicKey(key).export({format:'der',type:'spki'}).subarray(-32);
+ if(sha(raw)!==pub.public_key_sha256)die('WRONG_PRIVATE_KEY');
+ // Recheck freshness after human interaction/decryption, before producing proof.
+ await validateFirstBootstrapEnvelope(env,pub,ident);
+ const text=FIRST_PROOF_DOMAIN+canonicalFirstText(p),proof_signature_b64url=sign(null,Buffer.from(text),key).toString('base64url');
+ if(!verify(null,Buffer.from(text),createPublicKey(key),Buffer.from(proof_signature_b64url,'base64url')))die('SELF_CHECK_FAILED');
+ const file=join(dir,`first-key-proof-${p.nonce}.json`);
+ saveNew(file,{schema:'batcave.nanny.first_key.possession.v1',challenge_id:env.challenge_id,nonce:p.nonce,policy_sha256:p.policy_sha256,reviewer_public_key_sha256:pub.public_key_sha256,proof_signature_b64url,independently_attested:false,deployment_authorized:false,execution_authorized:false,grant_issued:false});
+ stdout.write(`PUBLIC_PROOF=${file}\nOnly this public proof goes to the owner portal. No enrollment or deployment occurred locally.\n`);
+}
 async function review(dir,challengePath,gateArchive,workerArchive,repoPath){
  ensureTTY(); const ident=ownerIdentity();const pub=loadJson(join(dir,PUBFILE));
  if(pub.host_identity?.host!==ident.host||pub.host_identity?.user!==ident.user)die('DIFFERENT_HOST_OR_ACCOUNT');
@@ -144,12 +174,13 @@ async function review(dir,challengePath,gateArchive,workerArchive,repoPath){
 }
 // Array.map supplies (value, index, array); path.resolve must receive only the path.
 function resolveReviewPaths(args){return args.map(value=>resolve(value));}
-export {encryptPkcs8,decryptPkcs8,validateEnvelope,checkArtifacts,resolveReviewPaths};
+export {encryptPkcs8,decryptPkcs8,validateEnvelope,checkArtifacts,resolveReviewPaths,validateFirstBootstrapEnvelope};
 if(process.argv[1] && import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
  const [cmd,...args]=process.argv.slice(2);
  try{
  if(cmd==='init'&&args.length===1)await init(resolve(args[0]));
+ else if(cmd==='prove-first-key'&&args.length===2)await proveFirstKey(...resolveReviewPaths(args));
  else if(cmd==='review'&&args.length===5)await review(...resolveReviewPaths(args));
- else die('USAGE: node cortana_independent_reviewer.mjs init <private_directory> OR review <private_directory> <gate_challenge.json> <owner_gate.zip> <oracle_worker.zip> <reviewed_source_git_checkout>');
+ else die('USAGE: node cortana_independent_reviewer.mjs init <private_directory> OR prove-first-key <existing_private_directory> <owner_endorsement.json> OR review <private_directory> <gate_challenge.json> <owner_gate.zip> <oracle_worker.zip> <reviewed_source_git_checkout>');
  }catch(e){stderr.write('DENIED: '+(e?.message||'UNKNOWN')+'\n');process.exitCode=1;}
 }

@@ -43,3 +43,26 @@
 
 - **Verified:** GitHub Actions run 44954029074 on code commit a7edf39f82224a80c5fa350437e95d420fdac367 SUCCESS. Source job 136998038345 passed 62 signing tests plus existing gate/worker checks. PostgreSQL job 136998038622 passed all 12 real database tests, including concurrent single-use consumption, revocation, rotation, digest constraints and client privilege denial. Both job logs independently read.
 - **Boundary:** LAB_PASS/STAGED only. No real independent key/attestation, owner/reviewer release signature, protected deployment or production fixture receipt is established.
+
+
+## 2026-11-21 — First-root dependency and visibility corrections
+
+- Observed: no privileged release reviewer exists, but the staged enrollment path
+  required an already independent custody attestation. The live lab-only route
+  cannot enroll the new candidate. Advisory referral alone cannot fill the gap.
+- Decision: owner explicitly approved a one-time owner-root trust rule using the
+  existing owner signature plus actual candidate possession. No independent
+  attestation is asserted. Real local initialization/ACL evidence is complete.
+- Implementation: generic private singleton policy, domain-separated endorsement
+  and proof, once-ever atomic registration, historical pair re-verification,
+  separate later release signatures, and existing-portal/local-key integration.
+- Correction: GitHub reports this repository PUBLIC. Actual candidate SID/policy
+  and operator evidence remain private; no visibility change was made.
+- Test discovery: mixed-case WRONG_PIN field labels were hidden as generic outage
+  errors by the gate's uppercase error filter. Fixed verifier error codes to use
+  uppercase field labels; the expanded-scope regression now gives a clear denial.
+- Verification: 80 local Node tests PASS. New actual PostgreSQL tests await CI.
+- Boundary: policy amendment is approved; rollout, signing and enrollment have
+  not occurred. No claims of production completion or model grants.
+- Rollback: staged source only. Preserve encrypted reviewer identity and held
+  intent; once registered, root-slot revocation is permanent and cannot rebootstrap.

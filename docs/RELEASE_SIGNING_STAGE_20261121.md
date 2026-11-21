@@ -1,5 +1,42 @@
 # Oracle signer continuation receipt — 2026-11-21
 
+Status: STAGED / 80 local Node tests PASS / first-root PostgreSQL CI pending / LIVE_RELEASE_BLOCKED.
+
+The Decision Master is authoritative. This is a code/test receipt.
+
+The owner approved one-time first-reviewer enrollment using the existing owner
+Ed25519 signature and actual candidate-key possession instead of independently
+attested custody for the first key only. The actual candidate/account/ACL/source
+receipts already exist privately; initialization is complete and must not repeat.
+The first-root trust basis is explicit and independently_attested remains false.
+
+The existing PR #2 now contains a generic, privately configured extension of the
+existing gate and same-origin owner portal. No actual SID, candidate configuration,
+or private operator evidence is added to public source. GitHub reports this
+repository PUBLIC; prior references to it as private were incorrect.
+
+- First-root policy is a singleton, immutable after installation; registration is
+  once-ever, including after revocation. Root enrollment requires zero existing
+  privileged reviewers and two real domain-separated signatures.
+- Every later release re-verifies the stored historical registration pair and
+  still requires two NEW owner/reviewer release signatures over the fixed scope.
+- Local prove-first-key reuses the encrypted key; human TTY, actual Windows SID,
+  existing owner signature and hidden passphrase are required. Only a public proof
+  file is written. It neither enrolls nor deploys.
+- Private PostgreSQL writes serialize root registration and recheck owner/policy,
+  held intent, expiry, nonce and revocation under locks. All authority flags false.
+- 80/80 local Node tests pass (62 original plus 18 first-root tests). PostgreSQL CI
+  adds 9 new real database tests alongside the 12 original tests; receipt pending.
+- No live migration, policy seed, gate/portal deployment, signer registration,
+  merge, model grant or release-hold change. PR #1 pins are unchanged.
+- Rollback of STAGED code: return PR #2 to its previous head. Preserve real key
+  files. A later live rollback must revoke a registered root permanently, never
+  reset its once-ever slot or delete signed receipts.
+
+## Historical receipt (superseded status; retain evidence)
+
+# Oracle signer continuation receipt — 2026-11-21
+
 Status: STAGED / LAB_PASS_62_NODE / LIVE_RELEASE_BLOCKED.
 
 The existing private Decision Master remains authoritative. This is a source and

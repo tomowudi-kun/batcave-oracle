@@ -1,13 +1,21 @@
 # Oracle release signing: existing gate extension (STAGED)
 
-**Current: STAGED / LAB_PASS (62 signing tests and 12 PostgreSQL tests, CI run 44954029074) / LIVE RELEASE BLOCKED.**
+**Current: STAGED / 80 local signing tests PASS / new PostgreSQL CI pending / LIVE RELEASE BLOCKED.**
+
+The owner approved a one-time first-key policy amendment. The recorded real
+Cortana candidate already exists: **do not run init again or overwrite key files.**
+See `FIRST_REVIEWER_OWNER_ROOT_STAGE.md` for the implemented first-key branch.
+The independent-attestation enrollment path below remains mandatory for later
+keys. The new owner-root branch truthfully records independently_attested=false,
+requires real owner endorsement plus candidate possession proof, and grants no
+execution or deployment. Policy approval alone did not authorize rollout.
 
 This continues draft PR #2. PR #1, its pinned commit and release archive hashes,
 the existing held intent, eight SHADOW gates and production worker are unchanged.
 
-## Implemented continuation
+## Original independent-attestation continuation (preserved)
 
-1. Locally run `node cortana_independent_reviewer.mjs init <private_directory>`
+1. For a genuinely new identity only, locally run `node cortana_independent_reviewer.mjs init <private_directory>`
    under the real dedicated protected Cortana Windows reviewer account. Local
    TTY confirmation and a hidden passphrase are mandatory. Return only
    `public.unenrolled.json`; never upload the encrypted private key or passphrase.

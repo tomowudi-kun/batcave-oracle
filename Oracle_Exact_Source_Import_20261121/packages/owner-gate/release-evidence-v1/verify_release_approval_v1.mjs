@@ -4,6 +4,7 @@
  * Trusted key records and replay state MUST come from the existing private gate,
  * never from an approval packet. No private keys are handled here.
  */
+import {FIRST_BASIS,verifyRegisteredFirstReviewer} from './first_reviewer_protocol.mjs';
 export const PIN = Object.freeze({
   intent_key: 'batcave.oracle.lab_v031.release_request.20261121',
   intent_sha256: 'ff41a4a74e25fd31bf9a466d1566100ba9e98cc5d8769fd01fe12c9c653c4e80',
@@ -46,7 +47,7 @@ async function fingerprint(raw){return hex(new Uint8Array(await crypto.subtle.di
 function validatePayload(p, {authenticated_owner_id, now}) {
   if(keys(p)!==expectedKeys || Object.values(p).some(v=>typeof v!=='string')) deny('INVALID_PAYLOAD_SHAPE');
   if(p.schema!==SCHEMA)deny('WRONG_SCHEMA');
-  for(const [k,v] of Object.entries(PIN))if(p[k]!==v) deny('WRONG_PIN_'+k);
+  for(const [k,v] of Object.entries(PIN))if(p[k]!==v) deny('WRONG_PIN_'+k.toUpperCase());
   if(!UUID.test(authenticated_owner_id)||p.owner_user_id!==authenticated_owner_id)deny('OWNER_MISMATCH');
   if(!HEX32.test(p.nonce) || !HEX64.test(p.intent_sha256))deny('INVALID_NONCE_OR_HASH');
   if(!canonicalISO(p.issued_at)||!canonicalISO(p.expires_at))deny('INVALID_TIME');
@@ -89,7 +90,10 @@ export async function verifyReleaseEvidence({
   // The lab registry uses an SPKI fingerprint; this release format hashes raw
   // Ed25519 bytes. Reject the actual key and BOTH fingerprint representations.
   if(trusted_nanny_key.public_key_sha256==='61dde7b2e70af2d47746b75f401d87d57e41e123aeba185cc8ca6b7e1b05b664'||trusted_nanny_key.public_key_b64url==='PkCiAsi_f6Cv2UkYCYZbE3z8L5pgUi339QB-yLVvKCo')deny('LAB_KEY_CANNOT_SIGN_RELEASE');
-  if(trusted_nanny_key.independently_attested!==true || trusted_nanny_key.release_policy_version!=='strict_nanny.release.v1')deny('MISSING_INDEPENDENT_ATTESTATION');
+  if(trusted_nanny_key.trust_basis===FIRST_BASIS){
+    const policy=await verifyRegisteredFirstReviewer({key:trusted_nanny_key,owner:trusted_owner_key,record:trusted_nanny_key.owner_bootstrap_record,now});
+    if(payload.intent_key!==policy.release_intent_key||payload.intent_sha256!==policy.release_intent_sha256)deny('FIRST_POLICY_RELEASE_SCOPE');
+  }else if(trusted_nanny_key.independently_attested!==true || trusted_nanny_key.release_policy_version!=='strict_nanny.release.v1')deny('MISSING_INDEPENDENT_ATTESTATION');
   if(trusted_nanny_key.private_key_custodian==='oracle_model' || trusted_nanny_key.private_key_custodian==='chatgpt')deny('MODEL_CANNOT_BE_SIGNER');
   if(typeof trusted_nanny_key.private_key_custodian!=='string'||!trusted_nanny_key.private_key_custodian.trim())deny('MISSING_REVIEWER_CUSTODIAN');
   const text=FIELDS.map(k=>k+'='+payload[k]).join('\n');

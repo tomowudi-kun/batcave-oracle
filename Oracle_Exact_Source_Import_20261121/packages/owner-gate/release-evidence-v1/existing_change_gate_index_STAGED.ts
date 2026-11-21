@@ -9,7 +9,7 @@ import { handleOracleLabOwnerRequest } from './owner_gate_core.mjs';
 
 import { handleReleaseGate } from './release_gate_core.mjs';
 import { releaseRepository } from './release_repository.mjs';
-const releaseActions = new Set(['oracle_release_enrollment_challenge_v1','oracle_release_enroll_reviewer_v1','oracle_release_challenge_v1','oracle_release_record_evidence_v1']);
+const releaseActions = new Set(['oracle_first_reviewer_challenge_v1','oracle_first_reviewer_register_v1','oracle_release_enrollment_challenge_v1','oracle_release_enroll_reviewer_v1','oracle_release_challenge_v1','oracle_release_record_evidence_v1']);
 const allowedOrigins = new Set([
  'https://batcave-cloud-control.vercel.app',
  'https://batcave-linux-approval.vercel.app'
