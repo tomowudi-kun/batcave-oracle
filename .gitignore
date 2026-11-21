@@ -1,0 +1,13 @@
+# Never commit credentials or private keys
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*service-role*
+*private-key*
+node_modules/
+.pytest_cache/
+__pycache__/
