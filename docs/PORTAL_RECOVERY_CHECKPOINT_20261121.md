@@ -25,3 +25,13 @@ Status: BLOCKED — complete original portal source retrieval; no portal redeplo
 
 ## Secrets
 Do not copy or record magic-link tokens, browser sessions, private keys, or API bearer tokens in this repository.
+
+## 2026-11-21 09:52 EST — live browser/connector correction (append-only)
+- AUTHENTICATION VERIFIED IN ONE TAB: original portal tab ID 388113049 reports signed in as owner and `execution_enabled:false`. Earlier hypothesis that magic-link auth is entirely broken is disproved; sessions vary by tab.
+- Another portal tab ID 388113045 reports `For security purposes, you can only request this after 56 seconds.` This confirms Supabase sign-in throttling, not ChatGPT model usage throttling. No new magic link required in authenticated tab.
+- Supabase registry at 2026-11-21T14:51:33Z: Cortana `active`, latest heartbeat 14:48:13Z (age 200s), Oracle `active`, latest heartbeat 14:51:27Z (age 6s). Heartbeats do not establish present command execution rights.
+- Desktop Commander device registry reports Cortana offline despite independent Batcave active status. Historical record says DC monthly usage exhausted; current quota itself was not verified.
+- Prior Cortana executor V2 read-only receipts include success (job af9ba7b1-1698-44a7-8ae4-3cfb91ef1d0a). Old leased/unreconciled job f81910db-7214-4a30-bc32-cad6ef49da55 must not be replayed.
+- Direct HTTP source retrieval from container failed DNS. Web page asset access failed. Google Drive connector search failed due to missing eligible linked account. No evidence original source absent.
+- Safest acceptance step: in the already authenticated portal tab, click `Check enrollment` exactly once. Inspect returned result with read-only Browser connector; do not click `Enroll key`, clear site data, or request another magic link.
+- No live deployment, DB permissions, owner key, or device changes in this diagnostic.
