@@ -2,7 +2,6 @@ from pathlib import Path
 import re, unittest, hashlib
 p=Path(__file__).resolve().parents[1]/'cloud/oracle_bridge_rpc_v03.sql'
 s=p.read_text()
-legacy=Path('/mnt/data/Oracle_Worker_Model_Integration_v0.3/cloud/oracle_bridge_rpc_v03.sql').read_text()
 
 class TestGuard(unittest.TestCase):
  def test_exact_functions_preserved(self):
