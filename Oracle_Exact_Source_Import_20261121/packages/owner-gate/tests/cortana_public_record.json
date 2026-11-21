@@ -1,0 +1,10 @@
+{
+  "schema": "batcave.nanny.public_key.request.v1",
+  "host": "CORTANA",
+  "reviewer_sid": "S-1-5-19",
+  "role": "lab_reviewer_only",
+  "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAPkCiAsi/f6Cv2UkYCYZbE3z8L5pgUi339QB+yLVvKCo=\n-----END PUBLIC KEY-----\n",
+  "public_key_sha256": "4133fdbf40cb94461a1c2d0f2cd1f9f9e6484693e04f2ffa03bcd9cbc53a1b8b",
+  "production_release_authorized": false,
+  "cloud_enrolled": false
+}

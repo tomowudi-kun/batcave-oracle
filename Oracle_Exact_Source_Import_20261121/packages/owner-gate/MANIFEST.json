@@ -1,0 +1,22 @@
+{
+  "version": "0.2.1",
+  "status": "STAGED/LAB_PASS; VERCEL_PREVIEW_READY; PRODUCTION_GATE_HELD",
+  "files": {
+    "README.md": "96fc2339267a0648e089a80a22e5a316aa2f53e0f3bc5c57deaf7177bb8928b7",
+    "checkpoints/CURRENT_STATE.md": "2300eb51ac619f72b9e0a16fb91d0e398615f59fe115e0a75dc8c959c541de13",
+    "checkpoints/ERROR_FIX_LOG.md": "9b8e0c2189e925bae899889e449ca34009c7da94fabf07325a8416bd858b848b",
+    "checkpoints/PORTAL_PREVIEW_RECEIPT.md": "a4e74d49604f62c8b39394b5043fa4a6dde34b2723b5f7187fb640e2a7b72ebe",
+    "portal/oracle-lab.html": "912006d15f01f4e0426ad56c1239ddbafa8b556f23044fb02bf8cef2b63d12ae",
+    "portal/oracle-lab.js": "7d64111011fb81b802633c43c71153b0e5f7f0bcf30fba25b54a6480d24a00a7",
+    "sql/lab_only_enrollment_additive_STAGED.sql": "2f863353bb3a8507778915934cab30b0c4a0f1308cc20ad35f7329f93759cbb5",
+    "src/existing_change_gate_additive_STAGED.ts": "4f5ee1b719ee3acc6a59e8b0a9be4c3314b7085ab7d7d0cb74bde4251591958e",
+    "src/owner_gate_core.mjs": "921326d8bcc67226b8f6c90c0e04aad6802668d69e8cad59c6371b641c960a9c",
+    "src/ts-stubs.d.ts": "733386dedc6620956824081fe7c55a5fb1997070753e0e288664a1553a520090",
+    "src/verify_lab_grant.mjs": "dce9c49396d1fc4aace245963d5dc3ab5c6304cd14de16cbad419b0343879dfd",
+    "src/verify_owner_enrollment_v2.mjs": "c14c2894a0b62a864153cd5d413717070567c4f8084651339a2d59399bce2a41",
+    "tests/cortana_public_record.json": "2f039ece07e51d67b8a6cb5fa16a3609ffe0bc0e434c291fa81f3b8751e62c3c",
+    "tests/test_contract_files.py": "538b198f521cc01b9c54a7a5ef0559b28e35059380b183c8c5f7a89eb79d8d29",
+    "tests/test_owner_gate_flow.mjs": "0bbda0045237cf8e3918f5c32fa1338e62dd2978d6b3b7d6ee6ec56598e43540",
+    "tests/test_portal_ui.mjs": "db8cd369af9edb86e9acff31ff3e0cfe1243e024edf8c577d80b0a577018e97e"
+  }
+}
