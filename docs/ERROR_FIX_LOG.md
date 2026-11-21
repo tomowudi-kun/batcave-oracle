@@ -81,3 +81,26 @@
   genuine owner endorsement and local candidate proof must occur afterwards.
 - Rollback record: source only changed in draft PR #2. Preserve all real keys,
   prior code head 6467625bcff5d25a67cff02e0c8232aece4e8774, and live holds.
+
+
+## 2026-11-21 — Owner-approved enrollment-only rollout verified
+
+- Authorized: explicit owner Yes to deploying tested enrollment gate and same-
+  origin owner page, preserving all release holds. No PR merge/model release.
+- Before capture: live Edge v6; prior portal dpl_Q2RW4bRCRZeHDJvcmUxHuB3ykNC2.
+  File API truncated base64; partial extraction stopped. Complete HTTP assets
+  recovered and all ten original deployment SHA-1 UIDs matched before mutation.
+- Applied: both private evidence migrations; exact unregistered private policy;
+  existing Edge v7 with JWT=true; original-origin portal extension in deployment
+  dpl_2t47vg5NkrXwERDNf3nNNuT1VbWh. Private operator data was not published.
+- Independently verified: eight Edge source files exact; canonical HTTP/module
+  bytes exact; real browser renders first-key form; SQL RLS/client restrictions,
+  policy registered_at NULL and no false independent-attestation/authority flags.
+- Preserved: owner public key unchanged/unrevoked, original intent HELD with
+  owner-auth unconfigured/Nanny pending; eight SHADOW rules; zero model grants,
+  challenges, privileged registrations and release receipts. No host-key access.
+- Limitation: actual authenticated owner signing and local key possession remain
+  unverified; coordinator did not simulate owner context or cryptographic consent.
+- Rollback: restore captured old Edge source/JWT and prior portal origin. Keep
+  private evidence and permanently revoke any future registered root; never
+  reset its slot or replace the existing encrypted key.

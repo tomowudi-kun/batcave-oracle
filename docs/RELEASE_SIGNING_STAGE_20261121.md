@@ -1,3 +1,57 @@
+# Enrollment-only live deployment receipt — 2026-11-21
+
+**VERIFIED: enrollment plumbing deployed. BLOCKED: genuine owner endorsement,
+local candidate possession proof and subsequent Oracle release signatures.**
+
+The owner explicitly approved the tested gate/owner-page rollout while preserving
+all Oracle release holds. No PR was merged and no worker/model was deployed.
+
+- Existing `batcave-change-gate-v1` is now **v7**, JWT verification remains true.
+  Independent readback matched all eight expected deployed source files exactly.
+  Existing GET/owner authentication/lab paths were preserved.
+- Both reviewed private evidence migrations applied. Six tables have RLS;
+  anon/authenticated clients have no direct read/write/finalizer execution access.
+  The exact private first-key policy is installed with registered_at NULL,
+  independently_attested=false and production_release_authorized=false.
+- Original owner-key origin `https://batcave-linux-approval.vercel.app/` now serves
+  deployment `dpl_2t47vg5NkrXwERDNf3nNNuT1VbWh`. All original assets are preserved;
+  app.js has only the reviewed extension appended, plus four reviewed modules.
+  Preview and canonical-origin HTTP bytes match. A real browser rendered the
+  first-key enrollment controls and truthful unattested-custody text.
+- Original owner key remains unchanged/unrevoked. Original intent remains HELD,
+  owner_auth_state unconfigured and Nanny pending. Zero model grants, eight
+  SHADOW rules, zero first-key challenges/registrations/release receipts.
+- Authenticated owner signing end-to-end remains UNKNOWN until the actual owner
+  uses the existing nonexportable key. It was not simulated through admin SQL.
+  Existing encrypted Cortana key and installed local signer files are untouched.
+- Local `prove-first-key` runtime update remains a separate local preparation
+  before possession proof; the gate/page deployment did not install host code.
+
+## Rollback and errors
+
+Before changes, captured gate v6 and prior portal deployment
+`dpl_Q2RW4bRCRZeHDJvcmUxHuB3ykNC2`; all ten original source bytes matched deployed
+SHA-1 UIDs. Restore that captured gate/JWT and portal origin to roll back serving.
+Preserve private evidence and permanently revoke any future registered root;
+never reset its once-ever slot or reinitialize private key files.
+
+The source-file API truncated base64 at 2000 characters. Detected invalid bytes,
+stopped partial extraction, recovered complete served assets using the existing
+Vercel HTTP capability and matched all ten UIDs before any deployment. Durable
+private before/after captures and operator policy are recorded in the Decision
+Master; actual SID/policy/operator evidence remains out of this public repository.
+
+Code commit `c53b91d7eaa8e45ac63314f4e12aa8ed0731d0ac` remains the deployed reviewed
+implementation. CI [44961173314](https://github.com/tomowudi-kun/batcave-oracle/actions/runs/44961173314)
+passed 80 signing and 21 actual PostgreSQL tests plus prior gate/worker suites.
+No implementation changes were made for this deployment receipt.
+
+Next: in the original browser/profile holding the existing owner key, select the
+saved public candidate and Prepare approved first-key enrollment. Genuine local
+owner endorsement and candidate possession proof remain required before registration.
+
+## Historical source-stage receipt (superseded deployment status)
+
 # Oracle signer continuation receipt — 2026-11-21
 
 Status: STAGED / LAB_PASS_80_NODE_21_POSTGRESQL / LIVE_RELEASE_BLOCKED.

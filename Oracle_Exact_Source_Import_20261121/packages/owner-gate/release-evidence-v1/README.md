@@ -1,6 +1,15 @@
 # Oracle release signing: existing gate extension (STAGED)
 
-**Current: STAGED / LAB_PASS (80 signing + 21 real PostgreSQL tests, CI run 44961173314) / LIVE RELEASE BLOCKED.**
+**Current: enrollment-only gate v7 and original-origin owner page DEPLOYED /
+LAB_PASS (80 signing + 21 PostgreSQL tests) / real signer enrollment and Oracle release BLOCKED.**
+
+The owner explicitly approved this rollout. Deployed Edge source, private policy,
+RLS/client restrictions, canonical portal asset bytes and real rendered form were
+independently read back. Actual signing/registration has not occurred; the original
+intent stays HELD and eight rules stay SHADOW. The existing Cortana key is preserved.
+See `docs/RELEASE_SIGNING_STAGE_20261121.md` for the exact live receipt and rollback.
+This source directory retains its historical STAGED filenames; they are not a live
+authority flag. The approved enrollment-only integration is now serving.
 
 The owner approved a one-time first-key policy amendment. The recorded real
 Cortana candidate already exists: **do not run init again or overwrite key files.**
@@ -50,11 +59,11 @@ the existing held intent, eight SHADOW gates and production worker are unchanged
   Include the new core/repository/verifier beside the existing lab modules.
 - `release_evidence_schema_STAGED.sql` adds only private evidence tables and a
   SECURITY INVOKER atomic finalizer; no client grants, trust seed, policy flip,
-  worker change or existing-intent update. **Not applied to production.**
+  worker change or existing-intent update. **Applied for the owner-approved enrollment-only rollout; no executable authority added.**
 - `owner_portal_extension_STAGED.js` is appended to existing portal app.js only
   after independent review. Serve panel modules under `/release-evidence-v1/`
   on the original `https://batcave-linux-approval.vercel.app` key origin. The
-  extension is **not deployed or browser-verified**.
+  extension is **deployed and rendered at the original origin; actual owner signing remains unverified**.
 - The SQL finalizer is callable only through the private DB connection, after
   authenticated JavaScript verifies signatures. Public/anon/authenticated
   roles cannot access it. No credentials are added to source.
