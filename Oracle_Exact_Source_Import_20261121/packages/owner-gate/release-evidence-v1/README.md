@@ -1,6 +1,6 @@
 # Oracle release signing: existing gate extension (STAGED)
 
-**Current: STAGED / 80 local signing tests PASS / new PostgreSQL CI pending / LIVE RELEASE BLOCKED.**
+**Current: STAGED / LAB_PASS (80 signing + 21 real PostgreSQL tests, CI run 44961173314) / LIVE RELEASE BLOCKED.**
 
 The owner approved a one-time first-key policy amendment. The recorded real
 Cortana candidate already exists: **do not run init again or overwrite key files.**

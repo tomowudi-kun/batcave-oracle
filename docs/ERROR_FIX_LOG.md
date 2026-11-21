@@ -66,3 +66,18 @@
   not occurred. No claims of production completion or model grants.
 - Rollback: staged source only. Preserve encrypted reviewer identity and held
   intent; once registered, root-slot revocation is permanent and cannot rebootstrap.
+
+
+## 2026-11-21 — Approved first-root source acceptance
+
+- Verified code c53b91d7eaa8e45ac63314f4e12aa8ed0731d0ac in Actions
+  44961173314 SUCCESS. Source job 137020089374 passed 80 signing tests plus
+  existing owner/worker suites. PostgreSQL job 137020089553 passed 12 original
+  and 9 first-root real database tests; both logs read independently.
+- Live verification: root tables absent, change gate v6 and owner gate v4,
+  owner key unchanged/unrevoked, original intent HELD/unconfigured/pending,
+  zero model grants and all eight SHADOW rules. No deployment was performed.
+- Next boundary: separately authorize the exact reviewed enrollment-only rollout;
+  genuine owner endorsement and local candidate proof must occur afterwards.
+- Rollback record: source only changed in draft PR #2. Preserve all real keys,
+  prior code head 6467625bcff5d25a67cff02e0c8232aece4e8774, and live holds.

@@ -1,6 +1,6 @@
 # Oracle signer continuation receipt — 2026-11-21
 
-Status: STAGED / 80 local Node tests PASS / first-root PostgreSQL CI pending / LIVE_RELEASE_BLOCKED.
+Status: STAGED / LAB_PASS_80_NODE_21_POSTGRESQL / LIVE_RELEASE_BLOCKED.
 
 The Decision Master is authoritative. This is a code/test receipt.
 
@@ -26,12 +26,27 @@ repository PUBLIC; prior references to it as private were incorrect.
 - Private PostgreSQL writes serialize root registration and recheck owner/policy,
   held intent, expiry, nonce and revocation under locks. All authority flags false.
 - 80/80 local Node tests pass (62 original plus 18 first-root tests). PostgreSQL CI
-  adds 9 new real database tests alongside the 12 original tests; receipt pending.
+  passed 9 new real database tests alongside all 12 original tests.
 - No live migration, policy seed, gate/portal deployment, signer registration,
   merge, model grant or release-hold change. PR #1 pins are unchanged.
 - Rollback of STAGED code: return PR #2 to its previous head. Preserve real key
   files. A later live rollback must revoke a registered root permanently, never
   reset its once-ever slot or delete signed receipts.
+
+## Verified first-root CI receipt
+
+- Code commit: `c53b91d7eaa8e45ac63314f4e12aa8ed0731d0ac`.
+- [GitHub Actions run 44961173314](https://github.com/tomowudi-kun/batcave-oracle/actions/runs/44961173314): SUCCESS.
+- Source job `137020089374`: 80 signing/portal/first-root tests PASS, plus
+  existing 20 owner-gate Node, 8 owner-gate contract and 35 worker tests PASS.
+- PostgreSQL job `137020089553`: original 12 and first-root 9 tests PASS;
+  completed 2026-11-21 23:19:23Z. Both actual job logs independently read.
+- Concurrent distinct first-key challenges produced one registration; revoked
+  roots cannot rebootstrap; private client access denied; intent remains held.
+- Fresh live readback: owner key unchanged/unrevoked; original intent HELD,
+  owner_auth_state unconfigured and nanny_review_state pending; zero model
+  grants; eight SHADOW rules; new privileged tables absent; deployed change
+  gate still v6 and owner gate v4. This is STAGED/LAB_PASS, not live enrollment.
 
 ## Historical receipt (superseded status; retain evidence)
 
