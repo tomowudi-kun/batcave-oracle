@@ -1,0 +1,24 @@
+name: Oracle production release — approval only
+on:
+  workflow_dispatch:
+    inputs:
+      release_digest:
+        description: Reviewed release SHA-256 digest
+        required: true
+        type: string
+      approval_receipt:
+        description: Independent owner/Nanny approval record identifier
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  authorization-check:
+    environment: oracle-production
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Stop until independently verified release integration exists
+        run: |
+          echo 'BLOCKED: production deploy integration is not installed. No production secrets or deployment commands are configured.'
+          exit 1
