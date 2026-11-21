@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Batcave — Oracle Lab Enrollment</title><link rel="stylesheet" href="/style.css">
+<style>.pin{overflow-wrap:anywhere;word-break:break-word}.state{font-weight:650}code{font-family:ui-monospace,monospace}.muted{color:#aabacd}</style>
+</head><body><main>
+<p><a href="/">Back to existing owner portal</a></p>
+<h1>Oracle / Cortana lab-only enrollment</h1>
+<p class="notice"><strong>Scope: fixed disposable Oracle coding fixture only.</strong> No remote shell, no production release, no deployment permission. This page never exports or replaces your existing browser signing key.</p>
+<section><h2>Reviewed identity</h2>
+<p>Reviewer: <strong>CORTANA / LOCAL SERVICE</strong> (SID S-1-5-19). Role <strong>lab_reviewer_only</strong>.</p>
+<p>Public signing key fingerprint: <code class="pin" id="reviewerFingerprint">4133fdbf40cb94461a1c2d0f2cd1f9f9e6484693e04f2ffa03bcd9cbc53a1b8b</code></p>
+<p>Oracle fixture compatibility token: <code class="pin">4958ee7d9847c43dc9a66e477d8db2cb75392f4c93a97aa1be5d8c4fc989747f</code></p>
+<p>Reviewed <strong>v0.3.1</strong> release archive SHA-256: <code class="pin">4fd544067957242a8178631167e2d81ae1ba466e6ed1d7ee4109bf4d5cc6b6a2</code></p></section>
+<section><h2>Owner-signed lab enrollment</h2>
+<p>Use the <strong>same browser profile and origin</strong> in which you enrolled the owner signing key. Sign in through the existing portal first, then follow the Oracle lab link in that same tab. A fresh five-minute challenge is issued for each enrollment attempt.</p>
+<label><input type="checkbox" id="scopeConsent" style="width:auto"> I authorize enrollment of this exact public reviewer key for <strong>lab-only</strong> reviews. I understand it cannot authorize production releases.</label>
+<div><button id="enrollButton" disabled>Sign and submit lab enrollment</button> <button id="selfTest">Run offline UI self-test</button></div>
+<p id="status" class="state" role="status">Checking page origin…</p><pre id="output"></pre>
+</section>
+<section><h2>Deployment control</h2><p>Release, execution and production permissions remain <strong>disabled</strong> on this page. New cloud functions must be independently reviewed and deployed before enrollment works.</p></section>
+</main><script src="/oracle-lab.js" defer></script></body></html>
