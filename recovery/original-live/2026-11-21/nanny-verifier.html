@@ -1,0 +1,9 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Batcave — Independent receipt verification</title><link rel="stylesheet" href="/style.css"></head><body><main>
+<h1>Batcave / Independent verification</h1>
+<p class="notice"><strong>Read-only verification.</strong> This page retrieves your latest signed pilot receipt through your authenticated Supabase session, then asks the Vercel verifier to recheck the public Ed25519 signature and request scope. It never sends your session token or private signing key to Vercel and cannot execute commands.</p>
+<section><h2>Signed owner receipt</h2><p>Use the same Chrome tab and profile in which you signed in to the <a href="/">approval portal</a>. The earlier five-minute approval may have expired; historical verification can still succeed, but never authorizes execution.</p>
+<button id="verify">Verify my latest signed receipt independently</button>
+<p id="status">Not checked</p><pre id="output"></pre></section>
+<section><h2>Implementation constraints</h2><p>Strict Nanny's production dual-signature authorization is not enabled. The Vercel verifier runs without Supabase database credentials and never releases jobs. If your login has expired, return to the approval portal to sign in again.</p>
+<a href="https://batcave-nanny-verifier.vercel.app/api/verify" rel="noopener">Verifier self-test (no personal data)</a></section>
+</main><script src="/nanny-verifier.js"></script></body></html>

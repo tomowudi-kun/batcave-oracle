@@ -1,0 +1,30 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Batcave Linux Approval Pilot</title><link rel="stylesheet" href="/style.css"></head><body><main>
+<h1>Batcave / Linux approval pilot</h1>
+<p class="notice"><strong>Execution is disabled.</strong> This page enrolls an owner-controlled signing key, signs a read-only Linux proposal, and asks an independent Nanny function to verify it. It does not connect to Cortana, run Linux, or grant command permissions.</p>
+<section>
+<h2>1. Authenticate as the owner</h2>
+<label for="email">Existing Batcave owner email</label><input autocomplete="username" id="email" placeholder="Your existing owner account" type="email"/>
+<div><button id="sendCode">Send sign-in email</button> <button id="sendOracleCode">Send new Oracle sign-in link</button></div>
+<label for="code">Email one-time code (if provided)</label><input autocomplete="one-time-code" id="code" inputmode="numeric" placeholder="Code from Supabase email" type="text"/>
+<div><button id="verifyCode">Verify code</button></div>
+<label for="password">Existing account password (alternative)</label><input autocomplete="current-password" id="password" placeholder="Used only for Supabase Auth" type="password"/>
+<div><button id="signInPassword">Sign in with password</button><button id="logout">Sign out</button></div>
+<p><small>Select Send sign-in email, then open its Magic Link in this same Chrome profile. No separate portal password is required. The email login goes directly to Supabase Auth; never paste passwords or tokens into chat.</small></p>
+</section>
+<section><h2>Continue to Oracle</h2><p>Once signed in, open <a href="/oracle-lab.html">Oracle lab enrollment</a> in this same tab. The new Oracle sign-in button above also redirects here after a successful email link.</p></section>
+<section>
+<h2>2. Register this browser's signing key</h2>
+<p>A non-exportable Ed25519 private key will stay in this browser profile. If you clear site data or change devices, the key will not follow you. Enrollment is irreversible through this pilot; recovery requires separate reviewed administration.</p>
+<div><button id="checkStatus">Check enrollment</button><button id="enroll">Enroll key on this browser</button></div>
+</section>
+<section>
+<h2>3. Sign a narrowly scoped proposal</h2>
+<p>Target: Cortana / BatcaveUbuntu. Operation: <code>runtime_inventory</code>. Validity: five minutes. No arbitrary commands and no Linux executor access.</p>
+<div><button id="signReview">Sign and independently review a proposal</button></div>
+</section>
+<section>
+<h2>Result</h2><p id="status">Not signed in</p><pre id="output"></pre>
+</section>
+<p><small>Strict Nanny's production signed-release and independent device execution gates are not enabled. This is a scoped authorization test only.</small></p>
+<section><h2>4. Independently verify the signed receipt</h2><p>After signing a proposal above, this opens a separate Vercel cryptographic verifier in the same browser tab. The owner login token stays with Supabase; nothing can be executed.</p><p><a href="/nanny-verifier.html">Verify my latest signed receipt independently</a></p></section>
+</main><script src="/app.js"></script></body></html>

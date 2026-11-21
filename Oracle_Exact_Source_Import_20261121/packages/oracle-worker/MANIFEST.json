@@ -1,0 +1,30 @@
+{
+  "edge_mock_tests": 7,
+  "files": {
+    "ERROR_FIX_LOG.md": "072c8b26a5a0cf8fdb6870a123aa50abd6227139496dc7c819223a7b18a10287",
+    "README.md": "a07f7e3ec4980503ab6badc7752a408c783ad290dacdeb92afd274fbf072d8de",
+    "cloud/index.ts": "608106f2fa5cc40e7e87e89dae2cf7dfa7af450ab49c536834681394d8718a63",
+    "cloud/oracle_bridge_rpc_v03.sql": "eb4f41911b8024211b0dd19892345a09d66c66e848a05a9a8936d60bc702b335",
+    "install-on-oracle.sh": "596972b1ae9b105aeb5701e330bf4b884f4237d33bfb7c51a285e365eb3bea6b",
+    "patch/batcave_linux_worker.py": "8eca8a0c769a83315d229e47bdcc0f0ef0ff027f69df2d68c4c23e2a0ea08501",
+    "patch/batcave_linux_worker.py.before.sha256": "3d702cc5d9bdb6fbcf191e11fdeb26e3e9e009efcb0ec28b0c7c0c27414f126f",
+    "patch/model_capability.py": "14c804f181c6f0d79b80aee30dc7777b16a860b7bb2a42198393f79391ac4b81",
+    "patch/oracle_cloud_bridge.py": "ef5b44c0a34be8bf06c3248d2b0091ab344d86ed80cbc8a84f0b41b87bcea86c",
+    "patch/oracle_cloud_bridge.py.before.sha256": "5847810a68180452c5cf933bad296be37c27580648756cc37cc6280b80ca1ac7",
+    "rollback-on-oracle.sh": "774dab15fc59022e9ebfea6900d2aa34a885f543d464dbbb87563b49cd16bf6f",
+    "tests/test_cloud_contract.py": "89c1855a5b7f18664b162b5a1ec39f94077af2be46380865bf4fd07db3bed89c",
+    "tests/test_cloud_edge.js": "aba66ed2d61c7301575e9ee379c649512085900dc6d7d54a978c29cd788b7541",
+    "tests/test_existing_worker_integration.py": "1a7559f07aa35e9342ed1b72fb2bd259d7238f18cb601cba11e0d19e432b6a93",
+    "tests/test_lab_grant_guard.py": "105757f06d999f023f051c972f8651c2f825c7953e9990a9e2daf51faa274337",
+    "tests/test_model_capability.py": "a1cc0cc88a3395b186aa44b173dd7d7a998e99050496031fc0af562fbf642790"
+  },
+  "host_deployment": "NOT_RUN",
+  "local_python_tests": 35,
+  "prior_staged_v03_sha256": "4958ee7d9847c43dc9a66e477d8db2cb75392f4c93a97aa1be5d8c4fc989747f",
+  "production_services_modified": false,
+  "schema": "batcave.oracle.model_integration.stage.v0.3.1",
+  "security_fix": "require_fresh_cortana_grant_consumed_atomically_before_poll_model_lease",
+  "source_snapshot_sha256": "f2a9ec7f7682d197ef890b87fb9130f43458c728f0f28ba942a4afa622c36907",
+  "sql_runtime_test": "TEMP_ATOMIC_LEASE_PREDICATE_PASS_ROLLED_BACK",
+  "status": "STAGED_GRANT_ENFORCED_NOT_DEPLOYED"
+}
