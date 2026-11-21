@@ -1,6 +1,6 @@
 # Oracle release signing: existing gate extension (STAGED)
 
-**Current: STAGED / LAB_PASS (60 Node tests) / LIVE RELEASE BLOCKED.**
+**Current: STAGED / LAB_PASS (62 Node tests) / LIVE RELEASE BLOCKED.**
 
 This continues draft PR #2. PR #1, its pinned commit and release archive hashes,
 the existing held intent, eight SHADOW gates and production worker are unchanged.
@@ -50,7 +50,7 @@ the existing held intent, eight SHADOW gates and production worker are unchanged
 - The SQL finalizer is callable only through the private DB connection, after
   authenticated JavaScript verifies signatures. Public/anon/authenticated
   roles cannot access it. No credentials are added to source.
-- Node command: `node --test test_release_approval_v1.mjs test_signer_bootstrap.mjs test_release_gate.mjs test_release_owner_panel.mjs` — 60/60 local PASS.
+- Node command: `node --test test_release_approval_v1.mjs test_signer_bootstrap.mjs test_release_gate.mjs test_release_owner_panel.mjs` — 62/62 local PASS.
 - `test_release_ledger.py` permits only localhost database `release_gate_test`;
   it tests real PostgreSQL concurrency/replay/revocation and public-role denials.
   Local PostgreSQL is unavailable. Final CI receipt is in the repository receipt.
@@ -71,6 +71,8 @@ the existing held intent, eight SHADOW gates and production worker are unchanged
   keys or live evidence as a source rollback. Before any later deployment,
   independently review actual custody, old Edge/portal/RPC rollback captures,
   owner/reviewer release signatures and worker-side enforcement/postflight.
+
+- ERR-LAB-FINGERPRINT-009: the lab registry hashes SPKI while release keys hash raw Ed25519 bytes. The same lab key could evade a hash-only denylist after re-fingerprinting. Fixed by rejecting its actual key bytes and both fingerprints in enrollment/verifier/finalizer; regressions pass.
 
 ## Prior verifier-only baseline (historical)
 

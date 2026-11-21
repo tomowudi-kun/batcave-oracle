@@ -86,6 +86,9 @@ export async function verifyReleaseEvidence({
   if(trusted_nanny_key.public_key_sha256===trusted_owner_key.public_key_sha256)deny('SIGNER_NOT_INDEPENDENT');
   // The existing CORTANA LAB reviewer must never be promoted to production signer.
   if(trusted_nanny_key.public_key_sha256==='4133fdbf40cb94461a1c2d0f2cd1f9f9e6484693e04f2ffa03bcd9cbc53a1b8b')deny('LAB_KEY_CANNOT_SIGN_RELEASE');
+  // The lab registry uses an SPKI fingerprint; this release format hashes raw
+  // Ed25519 bytes. Reject the actual key and BOTH fingerprint representations.
+  if(trusted_nanny_key.public_key_sha256==='61dde7b2e70af2d47746b75f401d87d57e41e123aeba185cc8ca6b7e1b05b664'||trusted_nanny_key.public_key_b64url==='PkCiAsi_f6Cv2UkYCYZbE3z8L5pgUi339QB-yLVvKCo')deny('LAB_KEY_CANNOT_SIGN_RELEASE');
   if(trusted_nanny_key.independently_attested!==true || trusted_nanny_key.release_policy_version!=='strict_nanny.release.v1')deny('MISSING_INDEPENDENT_ATTESTATION');
   if(trusted_nanny_key.private_key_custodian==='oracle_model' || trusted_nanny_key.private_key_custodian==='chatgpt')deny('MODEL_CANNOT_BE_SIGNER');
   if(typeof trusted_nanny_key.private_key_custodian!=='string'||!trusted_nanny_key.private_key_custodian.trim())deny('MISSING_REVIEWER_CUSTODIAN');

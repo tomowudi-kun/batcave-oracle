@@ -74,7 +74,7 @@ class LedgerTests(unittest.TestCase):
         canonical = json.dumps(payload, sort_keys=True, separators=(',', ':'))
         h = hashlib.sha256(canonical.encode()).hexdigest()
         candidate_sql = 'NULL' if candidate is None else literal(json.dumps(candidate))+'::jsonb'
-        query(f"INSERT INTO batcave.oracle_release_challenges_v1(id,kind,owner_user_id,owner_key_sha256,reviewer_key_sha256,attestation_id,nonce,issued_at,expires_at,payload,canonical_payload,candidate) VALUES('{ident}',{literal(kind)},'{OWNER}','{'a'*64}','{'b'*64}','{ATTESTATION}',{literal(nonce)},{literal(js_iso(begin))},{literal(js_iso(end))},{literal(canonical)}::jsonb,{literal(canonical)},{candidate_sql});")
+        query(f"INSERT INTO batcave.oracle_release_challenges_v1(id,kind,owner_user_id,owner_key_sha256,reviewer_key_sha256,attestation_id,nonce,issued_at,expires_at,payload,canonical_payload,payload_sha256,candidate) VALUES('{ident}',{literal(kind)},'{OWNER}','{'a'*64}','{'b'*64}','{ATTESTATION}',{literal(nonce)},{literal(js_iso(begin))},{literal(js_iso(end))},{literal(canonical)}::jsonb,{literal(canonical)},{literal(h)},{candidate_sql});")
         return ident, h, kind
 
     def finish(self, c, bad_hash=False):
@@ -111,6 +111,11 @@ class LedgerTests(unittest.TestCase):
         c = self.challenge()
         self.assertFalse(self.finish(c, bad_hash=True)['inserted'])
         self.assertTrue(self.finish(c)['inserted'])
+
+    def test_database_rejects_a_digest_that_does_not_match_actual_payload_bytes(self):
+        c = self.challenge()
+        error = query(f"UPDATE batcave.oracle_release_challenges_v1 SET payload_sha256='{'f'*64}' WHERE id='{c[0]}';", ok=False)
+        self.assertIn('check constraint', error)
 
     def test_expired_challenge_cannot_enroll(self):
         self.assertFalse(self.finish(self.challenge(expired=True))['inserted'])

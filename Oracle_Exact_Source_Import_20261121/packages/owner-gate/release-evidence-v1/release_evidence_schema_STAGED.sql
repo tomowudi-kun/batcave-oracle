@@ -46,7 +46,9 @@ CREATE TABLE batcave.oracle_release_challenges_v1 (
  consumed_at timestamptz,
  payload jsonb NOT NULL CHECK(jsonb_typeof(payload)='object'),
  canonical_payload text NOT NULL CHECK(length(canonical_payload)<=5000 AND canonical_payload::jsonb=payload),
- payload_sha256 text GENERATED ALWAYS AS (encode(sha256(convert_to(canonical_payload,'UTF8')),'hex')) STORED,
+ -- convert_to is STABLE, not IMMUTABLE; use a checked value rather than an
+ -- invalid generated column. The DB independently checks the exact bytes.
+ payload_sha256 text NOT NULL CHECK(payload_sha256=encode(sha256(convert_to(canonical_payload,'UTF8')),'hex')),
  candidate jsonb,
  CHECK((kind='enrollment' AND candidate IS NOT NULL AND jsonb_typeof(candidate)='object') OR (kind='release' AND candidate IS NULL)),
  CHECK(((payload->>'nonce')=nonce AND (payload->>'owner_user_id')::uuid=owner_user_id AND (payload->>'issued_at')::timestamptz=issued_at AND (payload->>'expires_at')::timestamptz=expires_at) IS TRUE),
@@ -80,7 +82,7 @@ BEGIN
  SELECT state,content_sha256,valid_until INTO i FROM batcave.change_gate_intents WHERE intent_key='batcave.oracle.lab_v031.release_request.20261121' FOR SHARE;
  IF NOT FOUND OR i.state<>'held' OR i.content_sha256<>'ff41a4a74e25fd31bf9a466d1566100ba9e98cc5d8769fd01fe12c9c653c4e80' THEN RETURN jsonb_build_object('inserted',false); END IF;
  SELECT * INTO a FROM batcave.oracle_release_custody_v1 WHERE id=c.attestation_id AND owner_user_id=p_owner AND public_key_sha256=c.reviewer_key_sha256 FOR SHARE;
- IF NOT FOUND OR a.revoked_at IS NOT NULL OR NOT a.independently_attested OR a.public_key_sha256=c.owner_key_sha256 OR a.public_key_sha256='4133fdbf40cb94461a1c2d0f2cd1f9f9e6484693e04f2ffa03bcd9cbc53a1b8b' THEN RETURN jsonb_build_object('inserted',false); END IF;
+ IF NOT FOUND OR a.revoked_at IS NOT NULL OR NOT a.independently_attested OR a.public_key_sha256=c.owner_key_sha256 OR a.public_key_sha256 IN ('4133fdbf40cb94461a1c2d0f2cd1f9f9e6484693e04f2ffa03bcd9cbc53a1b8b','61dde7b2e70af2d47746b75f401d87d57e41e123aeba185cc8ca6b7e1b05b664') THEN RETURN jsonb_build_object('inserted',false); END IF;
  IF p_owner_sig IS NULL OR p_owner_sig !~ '^[A-Za-z0-9_-]{86}$' THEN RETURN jsonb_build_object('inserted',false); END IF;
  IF c.kind='release' THEN
   SELECT * INTO k FROM batcave.oracle_release_keys_v1 WHERE owner_user_id=p_owner AND public_key_sha256=c.reviewer_key_sha256 FOR SHARE;

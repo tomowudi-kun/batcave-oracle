@@ -25,3 +25,16 @@
 - **Remaining:** Actual isolated reviewer key/custody and independent registration, real owner/reviewer signatures, controlled release/postflight.
 - **Rollback:** Revert source continuation only; no production rollback needed.
 
+## 2026-11-21 — PostgreSQL generated expression
+
+- **Observed:** CI 44953793317 source review passed, but the real PostgreSQL ledger setup rejected a generated digest column: generation expression is not immutable.
+- **Cause:** PostgreSQL classifies convert_to as STABLE; independently confirmed in live read-only pg_proc metadata.
+- **Fix:** Store a NOT NULL digest with a database CHECK that recomputes the exact UTF-8 byte hash; update repository insert and synthetic DB fixtures. No false IMMUTABLE wrapper or weaker hash assertion.
+- **Status:** Source fix awaiting new CI. No production DDL was attempted.
+
+
+## 2026-11-21 — Lab key fingerprint alias
+
+- **Observed:** Lab registry fingerprint hashes SPKI; new release records hash raw Ed25519 bytes. Hash-only denial missed an alternate representation of the same lab key.
+- **Fix:** Deny actual pinned lab public key bytes plus both SPKI/raw fingerprints in verifier, candidate enrollment and SQL finalizer. Two added cryptographic regressions pass; local Node total is now 62/62. No lab key promotion occurred.
+- **Additional regression:** DB must reject a supplied digest that differs from the actual canonical payload bytes; CI suite now has 12 PostgreSQL tests.

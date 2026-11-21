@@ -40,3 +40,4 @@ test('rejects wrong fingerprint',()=>rejects({trusted_owner_key:{...ownerKey,pub
 test('rejects lab-only signer even if it claims privileged role',()=>rejects({trusted_nanny_key:{...nannyKey,public_key_sha256:'4133fdbf40cb94461a1c2d0f2cd1f9f9e6484693e04f2ffa03bcd9cbc53a1b8b'}},'LAB_KEY_CANNOT_SIGN_RELEASE'));
 test('rejects malformed signer expiry instead of treating NaN as unexpired',()=>rejects({trusted_nanny_key:{...nannyKey,valid_until:'not-a-date'}},'SIGNER_KEY_EXPIRED'));
 test('rejects missing reviewer custody',()=>rejects({trusted_nanny_key:{...nannyKey,private_key_custodian:undefined}},'MISSING_REVIEWER_CUSTODIAN'));
+test('rejects the actual lab public key re-fingerprinted as raw bytes',()=>rejects({trusted_nanny_key:{...nannyKey,public_key_sha256:'61dde7b2e70af2d47746b75f401d87d57e41e123aeba185cc8ca6b7e1b05b664',public_key_b64url:'PkCiAsi_f6Cv2UkYCYZbE3z8L5pgUi339QB-yLVvKCo'}},'LAB_KEY_CANNOT_SIGN_RELEASE'));

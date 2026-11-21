@@ -8,6 +8,8 @@ export const ENROLL_DOMAIN='batcave.oracle.independent_nanny.enrollment.owner.v1
 const UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 const HEX=/^[a-f0-9]{64}$/;
 const LAB_KEY='4133fdbf40cb94461a1c2d0f2cd1f9f9e6484693e04f2ffa03bcd9cbc53a1b8b';
+const LAB_RAW_HASH='61dde7b2e70af2d47746b75f401d87d57e41e123aeba185cc8ca6b7e1b05b664';
+const LAB_RAW_KEY='PkCiAsi_f6Cv2UkYCYZbE3z8L5pgUi339QB-yLVvKCo';
 const FLAGS=Object.freeze({deployment_authorized:false,execution_authorized:false,grant_issued:false});
 const te=new TextEncoder();
 export function stableJson(x){
@@ -46,7 +48,7 @@ async function candidate(record,owner){
  const h=record.host_identity;
  must(exact(h,'host|os|user')&&typeof h.host==='string'&&h.host.toUpperCase()==='CORTANA'&&h.os==='win32'&&typeof h.user==='string'&&h.user.trim().length>0&&!/^(system|local service|network service)$/i.test(h.user),'PROTECTED_CORTANA_IDENTITY_REQUIRED');
  await checkPublic(record.public_key_b64url,record.public_key_sha256);
- must(record.public_key_sha256!==owner.public_key_sha256&&record.public_key_sha256!==LAB_KEY,'REVIEWER_KEY_NOT_INDEPENDENT');
+ must(record.public_key_sha256!==owner.public_key_sha256&&record.public_key_sha256!==LAB_KEY&&record.public_key_sha256!==LAB_RAW_HASH&&record.public_key_b64url!==LAB_RAW_KEY,'REVIEWER_KEY_NOT_INDEPENDENT');
  return {record_sha256:await hashText(stableJson(record)),host_identity_sha256:await hashText(stableJson(h))};
 }
 function custodyValid(a,owner,fp,hostHash,now){
@@ -102,7 +104,7 @@ export async function handleReleaseGate(body,ctx,repo,now=Date.now()){
   if(body.action==='oracle_release_challenge_v1'){
    must(exact(body,'action|reviewer_public_key_sha256')&&HEX.test(body.reviewer_public_key_sha256),'BAD_REQUEST');
    const k=await registered(repo,id,body.reviewer_public_key_sha256,now);
-   must(k.public_key_sha256!==owner.public_key_sha256&&k.public_key_sha256!==LAB_KEY,'REVIEWER_KEY_NOT_INDEPENDENT');
+   must(k.public_key_sha256!==owner.public_key_sha256&&k.public_key_sha256!==LAB_KEY&&k.public_key_sha256!==LAB_RAW_HASH&&k.public_key_b64url!==LAB_RAW_KEY,'REVIEWER_KEY_NOT_INDEPENDENT');
    const issued_at=new Date(now).toISOString(),expires_at=new Date(Math.min(now+10*60000,Date.parse(i.valid_until),Date.parse(k.valid_until))).toISOString();
    const nonce=Array.from(crypto.getRandomValues(new Uint8Array(16)),b=>b.toString(16).padStart(2,'0')).join('');
    const payload={...PIN,schema:SCHEMA,owner_user_id:id,nonce,issued_at,expires_at};
