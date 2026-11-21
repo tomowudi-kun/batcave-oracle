@@ -1,4 +1,78 @@
-# Oracle independent release-signature evidence (STAGED)
+# Oracle release signing: existing gate extension (STAGED)
+
+**Current: STAGED / LAB_PASS (60 Node tests) / LIVE RELEASE BLOCKED.**
+
+This continues draft PR #2. PR #1, its pinned commit and release archive hashes,
+the existing held intent, eight SHADOW gates and production worker are unchanged.
+
+## Implemented continuation
+
+1. Locally run `node cortana_independent_reviewer.mjs init <private_directory>`
+   under the real dedicated protected Cortana Windows reviewer account. Local
+   TTY confirmation and a hidden passphrase are mandatory. Return only
+   `public.unenrolled.json`; never upload the encrypted private key or passphrase.
+2. An independent registrar must inspect actual host/account/ACL separation,
+   custody and recovery, then register the nonsecret attestation in the private
+   gate. There is **no application endpoint that writes custody attestations**
+   and SQL seeds none. Client booleans cannot fill this boundary. Actual key
+   custody/registration remains BLOCKED, not assumed from this source.
+3. `release_gate_core.mjs` verifies the existing owner key signature over a
+   server-issued enrollment challenge binding candidate fingerprint and host
+   identity to the independently stored custody record. The nonce is single-use.
+4. Only that registered reviewer and the exact current HELD intent can obtain
+   the fixed release challenge (maximum ten minutes). `release_owner_panel.mjs`
+   extends the EXISTING original-origin owner portal, reusing its login and
+   IndexedDB key. Preparation never signs; a separate local button signs the
+   locally re-derived pinned message. Missing/exportable keys are rejected;
+   there is no key replacement, export or automatic signing.
+5. The local `review` command checks the actual owner signature, exact ZIP
+   bytes and clean pinned Git HEAD, then requires nonce-specific local human
+   review before signing with the separate encrypted reviewer key.
+6. The gate verifies both signatures over its immutable stored payload.
+   `release_repository.mjs` calls the private atomic SQL finalizer, which locks
+   and rechecks owner/reviewer/custody revocation, pinned intent and wall-clock
+   expiry, then records one receipt and consumes the nonce in one transaction.
+   Every response retains deployment_authorized=false, execution_authorized=false
+   and grant_issued=false. Evidence alone cannot deploy or execute anything.
+
+## Integration and verification
+
+- `existing_change_gate_index_STAGED.ts` is the complete extension of live Edge
+  v6, preserving confirmed-owner auth, JWT/CORS, original GET and lab paths.
+  Include the new core/repository/verifier beside the existing lab modules.
+- `release_evidence_schema_STAGED.sql` adds only private evidence tables and a
+  SECURITY INVOKER atomic finalizer; no client grants, trust seed, policy flip,
+  worker change or existing-intent update. **Not applied to production.**
+- `owner_portal_extension_STAGED.js` is appended to existing portal app.js only
+  after independent review. Serve panel modules under `/release-evidence-v1/`
+  on the original `https://batcave-linux-approval.vercel.app` key origin. The
+  extension is **not deployed or browser-verified**.
+- The SQL finalizer is callable only through the private DB connection, after
+  authenticated JavaScript verifies signatures. Public/anon/authenticated
+  roles cannot access it. No credentials are added to source.
+- Node command: `node --test test_release_approval_v1.mjs test_signer_bootstrap.mjs test_release_gate.mjs test_release_owner_panel.mjs` — 60/60 local PASS.
+- `test_release_ledger.py` permits only localhost database `release_gate_test`;
+  it tests real PostgreSQL concurrency/replay/revocation and public-role denials.
+  Local PostgreSQL is unavailable. Final CI receipt is in the repository receipt.
+
+## Error/fix continuation and rollback
+
+- ERR-SIGNER-PATH-005: `args.map(path.resolve)` forwarded numeric map indexes,
+  breaking review before its TTY check. Fixed with a unary resolver and actual
+  CLI regression. Original ZIP `init` still works; use corrected source for review.
+- ERR-SIGNER-EXPIRY-006: malformed key expiry escaped comparison through NaN.
+  Fixed canonical ISO validation and explicit reviewer custody; regressions pass.
+- ERR-SIGNING-LEDGER-007: enrollment/challenge/atomic consumption existed only as
+  requirements. The implementation above is now STAGED, not a live trust claim.
+- ERR-CONTINUATION-SQL-008: read-only metadata query ordered by an omitted
+  ordinal_position field. Corrected projection; read succeeded.
+- No production changes occurred. Revert this PR #2 continuation to roll back
+  source only; preserve PR #1, original ZIP and historic logs. Never delete real
+  keys or live evidence as a source rollback. Before any later deployment,
+  independently review actual custody, old Edge/portal/RPC rollback captures,
+  owner/reviewer release signatures and worker-side enforcement/postflight.
+
+## Prior verifier-only baseline (historical)
 
 **State:** DRAFT / LOCAL_TESTS_PASS / NO SIGNER ENROLLED / NO PRODUCTION AUTHORIZATION.
 

@@ -14,3 +14,14 @@
 - **Observed:** Prior v0.3 unsafe lease bug.
 - **Fix:** Use pinned v0.3.1 archive only; never deploy older v0.3.
 - **Verification:** v0.3.1 digest recorded in release state; production installation remains unverified.
+
+## 2026-11-21 — Release signer continuation
+
+- **Observed:** Review CLI forwarded numeric map indexes to path.resolve; invalid signer expiry escaped through NaN. Enrollment/release ledger implementation was missing.
+- **Fix:** Unary CLI resolver, canonical expiry and custody checks; staged authenticated enrollment, existing-portal signing panel, fixed challenge issuance, dual verification and atomic SQL receipt/nonce ledger.
+- **Validation:** 60 local Node tests PASS. Actual PostgreSQL race/revocation tests added to CI; final receipt is `docs/RELEASE_SIGNING_STAGE_20261121.md`.
+- **Transport receipt:** Browser job caf2752d-ea62-484f-8b84-9c7b0ae70076 succeeded once at 2026-11-21 21:39:25Z; zero accessible Batcave tabs. Both direct remote devices offline. No protected reviewer account access established.
+- **Live boundary:** Existing intent HELD, no privileged registry deployed, zero lab model grants, all eight gates SHADOW. No host/cloud/portal/policy deployment or model job.
+- **Remaining:** Actual isolated reviewer key/custody and independent registration, real owner/reviewer signatures, controlled release/postflight.
+- **Rollback:** Revert source continuation only; no production rollback needed.
+

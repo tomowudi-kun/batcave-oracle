@@ -56,7 +56,7 @@ function validatePayload(p, {authenticated_owner_id, now}) {
 function validateTrustedKey(key, expectedRole, owner, now){
   if(!key || key.role!==expectedRole || key.revoked_at!==null || key.registered!==true || key.owner_user_id!==owner)deny('UNTRUSTED_SIGNER');
   if(!HEX64.test(key.public_key_sha256)||typeof key.public_key_b64url!=='string')deny('BAD_SIGNER_KEY');
-  if(key.valid_until !== null && (typeof key.valid_until !== 'string' || Date.parse(key.valid_until)<=now))deny('SIGNER_KEY_EXPIRED');
+  if(key.valid_until !== null && (!canonicalISO(key.valid_until) || Date.parse(key.valid_until)<=now))deny('SIGNER_KEY_EXPIRED');
 }
 async function verifyOne(domain, signature, payloadText, trustedKey){
   const raw=b64bytes(trustedKey.public_key_b64url,43);
@@ -88,6 +88,7 @@ export async function verifyReleaseEvidence({
   if(trusted_nanny_key.public_key_sha256==='4133fdbf40cb94461a1c2d0f2cd1f9f9e6484693e04f2ffa03bcd9cbc53a1b8b')deny('LAB_KEY_CANNOT_SIGN_RELEASE');
   if(trusted_nanny_key.independently_attested!==true || trusted_nanny_key.release_policy_version!=='strict_nanny.release.v1')deny('MISSING_INDEPENDENT_ATTESTATION');
   if(trusted_nanny_key.private_key_custodian==='oracle_model' || trusted_nanny_key.private_key_custodian==='chatgpt')deny('MODEL_CANNOT_BE_SIGNER');
+  if(typeof trusted_nanny_key.private_key_custodian!=='string'||!trusted_nanny_key.private_key_custodian.trim())deny('MISSING_REVIEWER_CUSTODIAN');
   const text=FIELDS.map(k=>k+'='+payload[k]).join('\n');
   await verifyOne(OWNER_DOMAIN,owner_signature_b64url,text,trusted_owner_key);
   await verifyOne(NANNY_DOMAIN,nanny_signature_b64url,text,trusted_nanny_key);
