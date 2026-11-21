@@ -38,3 +38,8 @@
 - **Observed:** Lab registry fingerprint hashes SPKI; new release records hash raw Ed25519 bytes. Hash-only denial missed an alternate representation of the same lab key.
 - **Fix:** Deny actual pinned lab public key bytes plus both SPKI/raw fingerprints in verifier, candidate enrollment and SQL finalizer. Two added cryptographic regressions pass; local Node total is now 62/62. No lab key promotion occurred.
 - **Additional regression:** DB must reject a supplied digest that differs from the actual canonical payload bytes; CI suite now has 12 PostgreSQL tests.
+
+## 2026-11-21 — Corrected source acceptance receipt
+
+- **Verified:** GitHub Actions run 44954029074 on code commit a7edf39f82224a80c5fa350437e95d420fdac367 SUCCESS. Source job 136998038345 passed 62 signing tests plus existing gate/worker checks. PostgreSQL job 136998038622 passed all 12 real database tests, including concurrent single-use consumption, revocation, rotation, digest constraints and client privilege denial. Both job logs independently read.
+- **Boundary:** LAB_PASS/STAGED only. No real independent key/attestation, owner/reviewer release signature, protected deployment or production fixture receipt is established.

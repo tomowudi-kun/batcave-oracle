@@ -1,6 +1,6 @@
 # Oracle release signing: existing gate extension (STAGED)
 
-**Current: STAGED / LAB_PASS (62 Node tests) / LIVE RELEASE BLOCKED.**
+**Current: STAGED / LAB_PASS (62 signing tests and 12 PostgreSQL tests, CI run 44954029074) / LIVE RELEASE BLOCKED.**
 
 This continues draft PR #2. PR #1, its pinned commit and release archive hashes,
 the existing held intent, eight SHADOW gates and production worker are unchanged.
