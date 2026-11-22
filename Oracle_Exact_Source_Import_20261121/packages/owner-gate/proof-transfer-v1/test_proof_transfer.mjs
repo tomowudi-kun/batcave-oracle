@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {generateKeyPairSync,sign,createHash,randomUUID} from 'node:crypto';
-import {submitPublicProof,ownerProofStatus} from './proof_transfer_core.mjs';
+import {submitPublicProof,inspectPublicProof,ownerProofStatus} from './proof_transfer_core.mjs';
 import {FIRST_PROOF_DOMAIN,FIRST_OWNER_DOMAIN,firstStable} from '../release-evidence-v1/first_reviewer_protocol.mjs';
 const now=Date.parse('2026-11-21T23:00:00.000Z'),iso=n=>new Date(n).toISOString(),hash=x=>createHash('sha256').update(x).digest('hex');
 function pair(){const p=generateKeyPairSync('ed25519'),raw=p.publicKey.export({type:'spki',format:'der'}).subarray(-32);return{...p,public_key_b64url:raw.toString('base64url'),public_key_sha256:hash(raw)};}
@@ -30,3 +30,28 @@ test('owner status requires actual owner authentication and rejects another acco
 test('same public proof can be submitted idempotently; it does not consume the nonce',async()=>{const f=fixture();assert.equal((await f.submit()).status,200);assert.equal((await f.submit()).status,200);assert.equal(f.ctx.challenge.consumed_at,null);assert.deepEqual(f.stored(),f.proof);});
 test('a ledger rejection after validation fails closed',async()=>{const f=fixture();f.repo.store=async()=>({stored:false});assert.equal((await f.submit()).body.error,'PROOF_NOT_STORED');});
 test('tampered stored proof is not returned to the owner page',async()=>{const f=fixture();await f.submit();f.repo.proof=async()=>({...f.proof,proof_signature_b64url:'A'.repeat(86)});assert.equal((await f.status()).body.error,'FIRST_SIGNATURE_INVALID');});
+
+test('expired public artifact can be diagnosed without storing, consuming or renewing consent',async()=>{
+ const f=fixture();f.ctx.challenge.expires_at=iso(now-1);
+ const before=structuredClone(f.ctx),r=await inspectPublicProof({op:'inspect',proof:f.proof},f.repo);
+ assert.equal(r.status,200);assert.equal(r.body.diagnostic_only,true);assert.equal(r.body.historical_signatures_match,true);assert.equal(r.body.proof_received,false);
+ for(const k of ['reviewer_registered','independently_attested','deployment_authorized','execution_authorized','grant_issued'])assert.equal(r.body[k],false);
+ assert.equal(f.writes(),0);assert.deepEqual(f.ctx,before);assert.equal((await f.submit()).status,403);
+});
+test('historical diagnosis never overrides No, registration or nonce consumption',async()=>{
+ for(const change of [f=>f.ctx.root.owner_declined_at=iso(now),f=>f.ctx.root.registered_at=iso(now),f=>f.ctx.challenge.consumed_at=iso(now),f=>f.ctx.challenge.withdrawn_at=iso(now)]){
+  const f=fixture();change(f);const before=structuredClone(f.ctx),r=await inspectPublicProof({op:'inspect',proof:f.proof},f.repo);
+  assert.equal(r.status,200);assert.equal(r.body.proof_received,false);assert.equal(f.writes(),0);assert.deepEqual(f.ctx,before);assert.equal((await f.submit()).status,403);
+ }
+});
+test('historical inspection rejects forged and substituted artifacts without writing',async()=>{
+ for(const change of [f=>f.proof.proof_signature_b64url='A'.repeat(86),f=>f.proof.nonce='a'.repeat(32),f=>f.ctx.challenge.payload.nonce='a'.repeat(32),f=>f.proof.execution_authorized=true,f=>f.proof.extra='private',f=>f.ctx.root.revoked_at=iso(now)]){
+  const f=fixture();change(f);assert.equal((await inspectPublicProof({op:'inspect',proof:f.proof},f.repo)).status,403);assert.equal(f.writes(),0);
+ }
+});
+test('rejection logs identify stage and SQLSTATE without exposing exception text or evidence',async()=>{
+ const f=fixture(),events=[];f.repo.store=async()=>{throw Object.assign(Error('sensitive SQL and parameters must never be logged'),{code:'42501'});};
+ const r=await submitPublicProof({op:'submit',proof:f.proof},f.repo,now,e=>events.push(e));
+ assert.equal(r.status,503);assert.equal(r.body.error,'PROOF_UNAVAILABLE');assert.deepEqual(events,[{event:'public_proof_rejected',operation:'submit',stage:'ledger',error:'PROOF_UNAVAILABLE',sqlstate:'42501'}]);
+ assert.equal(JSON.stringify(events).includes(f.proof.proof_signature_b64url),false);
+});

@@ -3,6 +3,8 @@ Signature authentication is covered separately with real synthetic Node key pair
 """
 import concurrent.futures
 import json
+import os
+import subprocess
 from pathlib import Path
 import sys
 import unittest
@@ -28,6 +30,29 @@ class ProofLedgerTests(unittest.TestCase):
   self.assertEqual(query('SELECT registered_at IS NULL FROM batcave.oracle_first_reviewer_v1;'),'t')
   self.assertEqual(query('SELECT state FROM batcave.change_gate_intents;'),'held')
   self.assertEqual(query('SELECT count(*) FROM batcave.oracle_first_public_proofs_v1 WHERE independently_attested OR deployment_authorized OR execution_authorized OR grant_issued;'),'0')
+ def test_actual_postgres_js_driver_keeps_proof_as_json_object(self):
+  script="""
+import postgres from 'postgres';
+import {readFileSync} from 'node:fs';
+import {proofRepository} from './repository.mjs';
+const f=JSON.parse(readFileSync(0,'utf8'));
+const sql=postgres(process.env.BATCAVE_TEST_DATABASE_URL,{prepare:false,max:1});
+try{
+ const [legacy]=await sql`SELECT batcave.oracle_first_store_public_proof_v1(${f.id}::uuid,${f.payload_hash},${JSON.stringify(f.proof)}::jsonb,${f.proof_hash}) AS receipt`;
+ const repo=proofRepository(sql),checks=await repo.readiness(),fixed=await repo.store(f.id,f.payload_hash,f.proof,f.proof_hash),saved=await repo.proof(f.id);
+ console.log(JSON.stringify({legacy:legacy.receipt,fixed,checks,saved}));
+}finally{await sql.end();}
+"""
+  fixture=dict(id=self.c[0],payload_hash=self.c[1],proof_hash='a'*64,proof=self.proof)
+  result=subprocess.run(['node','--input-type=module','-e',script],input=json.dumps(fixture),capture_output=True,text=True,cwd=Path(__file__).resolve().parent,env=os.environ,timeout=25)
+  self.assertEqual(result.returncode,0,result.stderr)
+  receipt=json.loads(result.stdout)
+  self.assertFalse(receipt['legacy']['stored'])
+  self.assertTrue(receipt['fixed']['stored'])
+  self.assertTrue(all(receipt['checks'].values()))
+  self.assertEqual(receipt['saved'],self.proof)
+  self.assertEqual(query('SELECT registered_at IS NULL FROM batcave.oracle_first_reviewer_v1;'),'t')
+  self.assertEqual(query('SELECT count(*) FROM batcave.oracle_first_challenges_v1 WHERE consumed_at IS NOT NULL;'),'0')
  def test_replay_is_idempotent_and_concurrent_receipts_have_one_row(self):
   with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:r=list(pool.map(lambda _:self.store(),range(4)))
   self.assertTrue(all(v['stored'] for v in r));self.assertEqual(query('SELECT count(*) FROM batcave.oracle_first_public_proofs_v1;'),'1')

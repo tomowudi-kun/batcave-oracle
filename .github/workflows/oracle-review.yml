@@ -59,6 +59,12 @@ jobs:
           --health-retries 10
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install the exact production database driver for boundary regression
+        working-directory: Oracle_Exact_Source_Import_20261121/packages/owner-gate/proof-transfer-v1
+        run: npm install --no-save --ignore-scripts --no-package-lock postgres@3.4.5
       - name: Verify private release ledger atomicity (synthetic only)
         working-directory: Oracle_Exact_Source_Import_20261121/packages/owner-gate/release-evidence-v1
         env:
