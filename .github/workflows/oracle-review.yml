@@ -38,6 +38,9 @@ jobs:
       - name: Test phone notification transport
         working-directory: Oracle_Exact_Source_Import_20261121/packages/owner-gate/phone-alert-v1
         run: node --test test_notification_core.mjs test_service_worker.mjs
+      - name: Test signed public confirmation transfer
+        working-directory: Oracle_Exact_Source_Import_20261121/packages/owner-gate/proof-transfer-v1
+        run: node --test test_proof_transfer.mjs
 
 
   release-ledger:
@@ -64,3 +67,4 @@ jobs:
           python3 test_release_ledger.py
           python3 test_first_ledger.py
           python3 ../phone-alert-v1/test_notification_ledger.py
+          python3 ../proof-transfer-v1/test_proof_ledger.py

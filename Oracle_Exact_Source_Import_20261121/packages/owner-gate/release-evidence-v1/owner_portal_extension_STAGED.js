@@ -5,7 +5,7 @@ const ownerApi=async(path,body)=>{
 };
 import('./release-evidence-v1/guided_first_key.mjs').then(async({mountGuidedFirstKey})=>{
  const root=mountGuidedFirstKey({
-  origin:location.origin,api:body=>ownerApi('batcave-change-gate-v1',body),
+  origin:location.origin,api:body=>ownerApi('batcave-change-gate-v1',body),proofApi:body=>ownerApi('batcave-first-proof-v1',body),
   getOwnerId:()=>session?.user?.id,getOwnerEmail:()=>session?.user?.email,
   getOwnerKey:()=>{if(!session?.user?.id)throw Error('Sign in with your existing Batcave account.');return getKey(session.user.id);}
  });
