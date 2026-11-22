@@ -34,7 +34,7 @@ jobs:
       - name: Test independent release evidence (stage only)
         working-directory: Oracle_Exact_Source_Import_20261121/packages/owner-gate/release-evidence-v1
         run: |
-          node --test test_release_approval_v1.mjs test_signer_bootstrap.mjs test_release_gate.mjs test_release_owner_panel.mjs test_first_reviewer.mjs test_guided_first_key.mjs test_prepare_release_review.mjs test_release_sync.mjs test_lab_trial_handoff.mjs test_lab_job_status.mjs test_general_control_owner_signing_v1.mjs test_general_control_phone_panel_v1.mjs test_general_control_owner_api_STAGED.mjs
+          node --test test_release_approval_v1.mjs test_signer_bootstrap.mjs test_release_gate.mjs test_release_owner_panel.mjs test_first_reviewer.mjs test_guided_first_key.mjs test_prepare_release_review.mjs test_release_sync.mjs test_lab_trial_handoff.mjs test_lab_job_status.mjs test_general_control_reviewer_admission_STAGED.mjs test_general_control_owner_signing_v1.mjs test_general_control_phone_panel_v1.mjs test_general_control_owner_api_STAGED.mjs
       - name: Test phone notification transport
         working-directory: Oracle_Exact_Source_Import_20261121/packages/owner-gate/phone-alert-v1
         run: node --test test_notification_core.mjs test_service_worker.mjs
