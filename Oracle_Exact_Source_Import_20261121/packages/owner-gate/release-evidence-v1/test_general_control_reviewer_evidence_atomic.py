@@ -68,8 +68,6 @@ class ReviewerEvidence(unittest.TestCase):
   self.assertFalse(self.reviewer())
  def test_receipt_insert_failure_does_not_change_owner_record(self):
   self.assertTrue(self.owner())
-  query("""CREATE OR REPLACE FUNCTION pg_temp.block_review() RETURNS trigger
-   LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'blocked synthetic'; END $$;""") if False else None
   self.assertFalse(self.reviewer(sig='bad'))
   self.assertEqual(query('SELECT state FROM batcave.general_control_owner_evidence_staged_v1;'),'owner_signature_recorded_only')
 
