@@ -37,6 +37,8 @@ export default {fetch:async(req:Request)=>{
   }
   if(body?.op==='receipt')return reply(await recordNotificationReceipt(body,repo),200,origin);
   const cloned=new Request(req.url,{method:'POST',headers:req.headers,body:raw});
-  return await ownerHandler(cloned);
+  const response=await ownerHandler(cloned);
+  const responseHeaders=new Headers(response.headers);for(const [k,v] of Object.entries(headers(origin)))responseHeaders.set(k,v);
+  return new Response(response.body,{status:response.status,headers:responseHeaders});
  }catch(e){const error=e?.message==='UNAUTHORIZED'?'UNAUTHORIZED':e?.message==='RECEIPT_REJECTED'?'RECEIPT_REJECTED':'NOTIFICATION_UNAVAILABLE';return reply({...FLAGS,error},error==='UNAUTHORIZED'?401:403,origin);}
 }};
