@@ -4,6 +4,7 @@ import {releaseOwnerActions} from './release_owner_panel.mjs';
 import {PIN,OWNER_DOMAIN,NANNY_DOMAIN,canonicalReleaseText} from './verify_release_approval_v1.mjs';
 import {firstVerifySignature,firstStable,firstHash,firstISO} from './first_reviewer_protocol.mjs';
 import {LOCAL_TOOLS} from './guided_first_key.mjs';
+import {mountLabTrialHandoff} from './lab_trial_handoff.mjs';
 const must=(v,s)=>{if(!v)throw Error(s);};
 const noAuthority=r=>r&&['deployment_authorized','execution_authorized','grant_issued'].every(k=>r[k]===false);
 function checkEnvelope(e,id,now){
@@ -94,7 +95,7 @@ export async function buildReleaseCommand(e,fp,now=Date.now()){
 export function mountGuidedRelease(options){
  const actions=guidedReleaseActions(options),root=document.createElement('section');root.id='guided-release';
  root.innerHTML='<h2>Allow Oracle’s first local AI trial?</h2><p>Oracle will generate and test one fixed sample in a disposable workspace. This request does not permit general computer control.</p><div data-release-phone><button data-release-yes>Yes</button><button data-release-no>No</button></div><p data-release-result role="status" aria-live="polite"></p><div data-release-cortana hidden><p>Use the black StrictNannyReviewer window to review the prepared release files with your existing key.</p><textarea data-release-command readonly rows="5" aria-label="Cortana release review command"></textarea><button data-release-copy>Copy release review command</button></div><button data-release-refresh>Refresh release status</button><p data-release-error role="status" aria-live="polite"></p>';
- options.parent.append(root);const q=s=>root.querySelector(s);let state,busy=false,disposed=false,commandNonce=null;
+ options.parent.append(root);mountLabTrialHandoff(options);const q=s=>root.querySelector(s);let state,busy=false,disposed=false,commandNonce=null;
  let phone=window.matchMedia('(max-width: 700px)').matches;
  function paint(){
   const pending=!!state?.envelope,done=state?.release_review_recorded===true;
