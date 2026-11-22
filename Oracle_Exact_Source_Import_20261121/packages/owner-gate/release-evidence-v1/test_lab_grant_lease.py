@@ -52,7 +52,9 @@ INSERT INTO public.batcave_device_credentials VALUES('{DEVICE}','{TOKEN}',NULL);
   action={'runtime_inventory':'oracle_runtime_inventory_v1','disposable_project_build_v1':'oracle_disposable_build_v1','model_generate_and_verify_v1':'oracle_model_generate_v1'}[operation]
   payload=dict(schema='batcave.oracle.job.v1',nonce=nonce,operation=operation)
   if operation=='model_generate_and_verify_v1':payload.update(fixture='fixed_clamp_score_v1',artifact_sha256=FIXTURE)
-  query(f"INSERT INTO batcave.commands(id,device_id,action,status,payload,expires_at) VALUES('{ident}','{DEVICE}',{literal(action)},'pending',{literal(json.dumps(payload))}::jsonb,now()+interval '4 minutes');")
+  # The signed owner/reviewer protocol uses canonical ISO milliseconds. A job
+  # with unrepresentable microseconds must not silently extend signed expiry.
+  query(f"INSERT INTO batcave.commands(id,device_id,action,status,payload,expires_at) VALUES('{ident}','{DEVICE}',{literal(action)},'pending',{literal(json.dumps(payload))}::jsonb,date_trunc('milliseconds',clock_timestamp())+interval '4 minutes');")
   expiry=query(f"SELECT expires_at FROM batcave.commands WHERE id='{ident}';")
   return dict(id=ident,nonce=nonce,payload=payload,expires_at=expiry)
  def enroll(self):
@@ -93,7 +95,7 @@ try{
 """
   result=subprocess.run(['node','--input-type=module','-e',script],input=json.dumps(x),capture_output=True,text=True,cwd=HERE.parent/'proof-transfer-v1',env=os.environ,timeout=25)
   self.assertEqual(result.returncode,0,result.stderr);receipt=json.loads(result.stdout)
-  self.assertFalse(receipt['old']['inserted']);self.assertTrue(receipt['fixed']['inserted'])
+  self.assertFalse(receipt['old']['inserted'],receipt);self.assertTrue(receipt['fixed']['inserted'],receipt)
   self.assertTrue(self.rpc()['pending']);self.assertFalse(self.rpc()['pending'])
   self.assertEqual(query('SELECT attempt_count FROM batcave.commands;'),'1')
   self.assertEqual(query('SELECT count(*) FROM batcave.oracle_lab_review_grants_v1 WHERE consumed_at IS NOT NULL;'),'1')
