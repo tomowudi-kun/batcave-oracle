@@ -57,7 +57,15 @@ class RootScopePending(unittest.TestCase):
    self.assertFalse(self.endorse(**opts))
   self.assertEqual(query("SELECT state FROM batcave.general_control_owner_rescope_challenges_staged_v1;"),'unused')
  def test_expired_cannot_admit(self):
-  query("UPDATE batcave.general_control_owner_rescope_challenges_staged_v1 SET expires_at=clock_timestamp()-interval '1 second',payload=jsonb_set(payload,'{expires_at}',to_jsonb(to_char(clock_timestamp()-interval '1 second','YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\"')));")
+  query("""WITH t AS (
+     SELECT date_trunc('milliseconds',clock_timestamp()-interval '10 minutes') AS issued,
+            date_trunc('milliseconds',clock_timestamp()-interval '8 minutes') AS expires)
+    UPDATE batcave.general_control_owner_rescope_challenges_staged_v1 c
+    SET issued_at=t.issued,expires_at=t.expires,
+        payload=jsonb_set(jsonb_set(c.payload,'{issued_at}',
+           to_jsonb(to_char(t.issued,'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'))),
+           '{expires_at}',to_jsonb(to_char(t.expires,'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')))
+    FROM t;""")
   self.assertFalse(self.endorse())
  def test_concurrent_submissions_exactly_one(self):
   with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
