@@ -52,7 +52,7 @@ export function guidedFirstKeyActions(options){
 export async function buildCortanaCommand(e){
  const text=firstStable(e),hash=await firstHash(text),bytes=new TextEncoder().encode(text);
  const encoded=btoa(String.fromCharCode(...bytes)),nonce=e.payload.nonce;
- if(!/^[a-f0-9]{32}$/.test(nonce)||!/^S-1-5-21-\d+-\d+-\d+-\d+$/.test(e.policy.reviewer_sid)||!firstISO(e.payload.expires_at))throw Error('Invalid Cortana approval.');
+ if(!/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(e.challenge_id)||!/^[a-f0-9]{64}$/.test(e.policy_sha256)||!/^[a-f0-9]{64}$/.test(e.policy.reviewer_key_sha256)||!/^[a-f0-9]{32}$/.test(nonce)||!/^S-1-5-21-\d+-\d+-\d+-\d+$/.test(e.policy.reviewer_sid)||!firstISO(e.payload.expires_at))throw Error('Invalid Cortana approval.');
  const lines=[
  '& {',
  '  $ErrorActionPreference = "Stop"',
