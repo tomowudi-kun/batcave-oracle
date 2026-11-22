@@ -44,7 +44,8 @@ export function buildLabRequestCommand(raw,now=Date.now()){
  '  $receipt = Get-Content -LiteralPath $proof -Raw | ConvertFrom-Json',
  `  if ($receipt.payload.request_id -cne "${r.request_id}" -or $receipt.payload.decision -cne "LAB_ALLOW" -or $receipt.payload.execution_authorized -ne $false -or $receipt.payload.deployment_authorized -ne $false -or $receipt.payload.production_release_authorized -ne $false) { throw "Cortana denied the lab request. Stop and show the error." }`,
  '  Write-Host "LAB_REVIEW_READY=$proof"',
- '  Write-Host "The public review is ready. Return to this chat; no passphrase or JSON copying is needed."',
+ '  Get-Content -LiteralPath $proof -Raw',
+ '  Write-Host "PUBLIC REVIEW ONLY. Send a screenshot of this output in the chat. No passphrase is needed."',
  '}'
  ].join('\r\n');
 }
