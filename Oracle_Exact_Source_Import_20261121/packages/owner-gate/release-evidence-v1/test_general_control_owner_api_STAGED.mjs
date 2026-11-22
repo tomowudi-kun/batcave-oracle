@@ -125,7 +125,7 @@ test('unsigned, mismatched, tampered or untrusted owner evidence never reaches w
   const r=await handle(actionRecord(changed),ctx,f.repo,now);
   assert.notEqual(r.status,200);
  }
- assert.equal(f.state.calls,1); // only a well-shaped but cryptographically invalid signature reached verification, not write
+ assert.equal(f.state.calls,0); // none of these signatures may reach the atomic writer
  assert.equal(f.state.signed,0);
 });
 test('changed trusted policy, session, revoked scoped key or expiry stops the write',async()=>{
