@@ -76,4 +76,5 @@ jobs:
           python3 ../proof-transfer-v1/test_proof_ledger.py
           python3 test_release_sync_ledger.py
           python3 test_lab_grant_lease.py
+          python3 test_general_control_nonce_ledger.py
           python3 ../../general-control-v1/tests/test_command_recovery.py
