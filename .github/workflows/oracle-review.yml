@@ -74,3 +74,4 @@ jobs:
           python3 test_first_ledger.py
           python3 ../phone-alert-v1/test_notification_ledger.py
           python3 ../proof-transfer-v1/test_proof_ledger.py
+          python3 test_lab_grant_lease.py
