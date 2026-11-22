@@ -45,16 +45,16 @@ class OwnerEvidenceAtomicity(unittest.TestCase):
   self.assertEqual(query('SELECT count(*) FROM batcave.general_control_owner_evidence_staged_v1;'),'1')
  def test_insert_failure_rolls_back_nonce_consumption(self):
   # Force an evidence constraint error after the nonce UPDATE, in same transaction.
-  query(f"""CREATE OR REPLACE FUNCTION pg_temp.block_owner_evidence() RETURNS trigger
+  query(f"""CREATE OR REPLACE FUNCTION batcave.block_owner_evidence_staged_test() RETURNS trigger
     LANGUAGE plpgsql AS $$BEGIN RAISE EXCEPTION 'synthetic evidence insert failure'; END$$;
     CREATE TRIGGER synthetic_block BEFORE INSERT ON batcave.general_control_owner_evidence_staged_v1
-    FOR EACH ROW EXECUTE FUNCTION pg_temp.block_owner_evidence();""")
+    FOR EACH ROW EXECUTE FUNCTION batcave.block_owner_evidence_staged_test();""")
   error=query(f"""SELECT batcave.general_control_record_owner_evidence_staged_v1(
    '{self.request}','{OWNER}','{self.nonce}','{'a'*64}','{'b'*64}','{'c'*128}');""",ok=False)
   self.assertIn('synthetic evidence insert failure',error)
   self.assertEqual(query('SELECT state FROM batcave.general_control_nonce_ledger_v1;'),'unused')
   self.assertEqual(query('SELECT count(*) FROM batcave.general_control_owner_evidence_staged_v1;'),'0')
-  query('DROP TRIGGER synthetic_block ON batcave.general_control_owner_evidence_staged_v1;')
+  query('DROP TRIGGER synthetic_block ON batcave.general_control_owner_evidence_staged_v1; DROP FUNCTION batcave.block_owner_evidence_staged_test();')
  def test_client_roles_have_no_evidence_access(self):
   for role in ['anon','authenticated']:
    for statement in ['SELECT * FROM batcave.general_control_owner_evidence_staged_v1',
