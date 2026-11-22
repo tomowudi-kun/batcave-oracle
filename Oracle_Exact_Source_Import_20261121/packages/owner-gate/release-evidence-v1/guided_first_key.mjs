@@ -112,8 +112,8 @@ export function mountGuidedFirstKey(options){
  async function act(fn){busy=true;paint();try{await fn();message('');}catch(e){message(friendly(e));}finally{busy=false;await refresh();paint();}}
  q('[data-account-controls]').onclick=()=>{showAuth=!showAuth;paint();};
  q('[data-phone-mode]').onclick=()=>{mode='phone';paint();};q('[data-cortana-mode]').onclick=()=>{mode='cortana';paint();};
- q('[data-decline]').onclick=()=>act(async()=>{const r=await actions.decline();state=await actions.refresh();q('[data-phone-result]').textContent=r.explanation;});
- q('[data-approve]').onclick=()=>act(async()=>{state=await actions.approve();});
+ q('[data-decline]').onclick=()=>act(async()=>{const r=await actions.decline();state=await actions.refresh();q('[data-phone-result]').textContent=r.explanation;root.dispatchEvent(new CustomEvent('batcave-owner-decision'));});
+ q('[data-approve]').onclick=()=>act(async()=>{state=await actions.approve();root.dispatchEvent(new CustomEvent('batcave-owner-decision'));});
  q('[data-copy]').onclick=()=>act(async()=>{const text=await actions.command();q('[data-command]').value=text;await navigator.clipboard.writeText(text);q('[data-wait]').textContent='Command copied. Use the black reviewer PowerShell window.';});
  q('[data-finish]').onclick=()=>act(async()=>{state=await actions.finish(q('[data-proof]').value);q('[data-proof]').value='';});
  q('[data-refresh]').onclick=refresh;
