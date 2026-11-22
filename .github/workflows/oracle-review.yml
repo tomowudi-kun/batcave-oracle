@@ -78,4 +78,5 @@ jobs:
           python3 test_lab_grant_lease.py
           python3 test_general_control_nonce_ledger.py
           python3 test_general_control_owner_evidence_atomic.py
+          (cd ../proof-transfer-v1 && node --test test_general_control_private_repository_STAGED.mjs)
           python3 ../../general-control-v1/tests/test_command_recovery.py
