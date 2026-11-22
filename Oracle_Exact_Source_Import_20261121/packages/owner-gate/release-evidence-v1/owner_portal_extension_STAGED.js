@@ -8,7 +8,7 @@ import('./release-evidence-v1/guided_first_key.mjs').then(async({mountGuidedFirs
  const root=mountGuidedFirstKey({
   origin:location.origin,api:body=>ownerApi('batcave-change-gate-v1',body),proofApi:body=>ownerApi('batcave-first-proof-v1',body),
   getOwnerId:()=>session?.user?.id,getOwnerEmail:()=>session?.user?.email,
-  onRegistered:async(parent)=>{const {mountGuidedRelease}=await import('./release-evidence-v1/guided_release.mjs');const release=mountGuidedRelease({...releaseOptions,parent});parent.insertBefore(release,parent.querySelector('[data-done]'));parent.querySelector('h1').textContent='Oracle approval';parent.querySelector('[data-done]').hidden=true;},
+  onRegistered:async(parent)=>{const {mountGuidedRelease}=await import('./release-evidence-v1/guided_release.mjs');const release=mountGuidedRelease({...releaseOptions,parent});parent.insertBefore(release,parent.querySelector('[data-done]'));parent.querySelector('h1').textContent='Oracle approval';parent.querySelector('.held-note').textContent='Reviewer enrolled. These signatures cover the fixed Oracle trial; deployment and task permission remain held.';parent.querySelector('[data-done]').hidden=true;},
   getOwnerKey:()=>{if(!session?.user?.id)throw Error('Sign in with your existing Batcave account.');return getKey(session.user.id);}
  });
  try{const {mountPhoneAlerts}=await import('./phone-alert-v1/phone_alert_client.mjs');
