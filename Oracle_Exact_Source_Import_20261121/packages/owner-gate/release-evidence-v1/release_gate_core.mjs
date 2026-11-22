@@ -79,6 +79,12 @@ async function firstStored(ch,record,policy,owner,now){
  const c=await candidate(ch.candidate,owner);
  must(c.record_sha256===policy.candidate_sha256&&c.host_identity_sha256===policy.host_identity_sha256&&await hashText(stableJson(ch.payload))===ch.payload_sha256&&ch.payload.nonce===ch.nonce&&ch.payload.issued_at===ch.issued_at&&ch.payload.expires_at===ch.expires_at,'FIRST_RECEIPT_BINDING');
 }
+async function releaseStored(ch,record,owner,now){
+ must(ch?.kind==='release'&&ch.withdrawn_at===null&&fresh(ch,now)&&ch.owner_user_id===owner.owner_user_id&&ch.owner_key_sha256===owner.public_key_sha256&&ch.policy_sha256===record.policy_sha256&&ch.reviewer_key_sha256===record.policy.reviewer_key_sha256,'CHALLENGE_NOT_FRESH');
+ must(!record.last_owner_declined_at||Date.parse(ch.issued_at)>Date.parse(record.last_owner_declined_at),'RELEASE_OWNER_DECLINED');
+ must(await hashText(stableJson(ch.payload))===ch.payload_sha256&&ch.payload.nonce===ch.nonce&&ch.payload.issued_at===ch.issued_at&&ch.payload.expires_at===ch.expires_at&&ch.payload.owner_user_id===owner.owner_user_id,'RELEASE_RECEIPT_BINDING');
+ canonicalReleaseText(ch.payload);for(const [key,value]of Object.entries(PIN))must(ch.payload[key]===value,'RELEASE_SCOPE_CHANGED');
+}
 export async function handleReleaseGate(body,ctx,repo,now=Date.now()){
  try{
   must(ctx?.owner_authenticated===true&&UUID.test(ctx.owner_user_id),'OWNER_AUTH_REQUIRED');
@@ -86,6 +92,36 @@ export async function handleReleaseGate(body,ctx,repo,now=Date.now()){
   const id=ctx.owner_user_id,owner=await ownerKey(repo,id);
   const i=await intent(repo,now);
   const publicOwner={role:'owner',owner_user_id:id,public_key_b64url:owner.public_key_b64url,public_key_sha256:owner.public_key_sha256,revoked_at:null,registered:true,valid_until:null};
+  if(body.action==='oracle_release_status_v1'){
+   must(exact(body,'action'),'BAD_REQUEST');
+   const record=await repo.getFirstPolicy(),fp=record?.policy?.reviewer_key_sha256;
+   await registered(repo,id,fp,now,owner);
+   const ch=await repo.getLatestFirstRelease(id,record.policy_sha256);
+   let envelope=null,review=null;
+   const recorded=!!ch?.recorded_at&&ch.recorded_at===ch.consumed_at;
+   if(ch&&!recorded&&!record.owner_declined_at&&ch.pending_owner_signature_b64url&&ch.withdrawn_at===null&&fresh(ch,now)){
+    await releaseStored(ch,record,owner,now);
+    await verifyPublicSignature(owner,OWNER_DOMAIN+canonicalReleaseText(ch.payload),ch.pending_owner_signature_b64url);
+    envelope={schema:'batcave.oracle.gate.release.challenge.v1',issuer:'batcave-control',challenge_id:ch.id,payload:ch.payload,owner_signature_b64url:ch.pending_owner_signature_b64url};
+    review=await repo.getReleaseReview(id,ch.id);
+   }
+   return {status:200,body:{...FLAGS,reviewer_registered:true,reviewer_public_key_sha256:fp,reviewer_public_key_b64url:record.policy.reviewer_public_key_b64url,owner:publicOwner,envelope,review,release_review_recorded:recorded,owner_declined:!!record.owner_declined_at}};
+  }
+  if(body.action==='oracle_release_endorse_v1'){
+   must(exact(body,'action|challenge_id|owner_signature_b64url')&&UUID.test(body.challenge_id),'BAD_REQUEST');
+   const record=await repo.getFirstPolicy();await registered(repo,id,record?.policy?.reviewer_key_sha256,now,owner);
+   const ch=await repo.getFirstChallenge(id,body.challenge_id);await releaseStored(ch,record,owner,now);
+   await verifyPublicSignature(owner,OWNER_DOMAIN+canonicalReleaseText(ch.payload),body.owner_signature_b64url);
+   const saved=await repo.saveReleaseEndorsementVerified({challenge:ch,owner_signature_b64url:body.owner_signature_b64url});
+   must(saved?.saved===true,'RELEASE_ENDORSEMENT_STALE_OR_CHANGED');
+   return {status:200,body:{...FLAGS,owner_endorsement_saved:true}};
+  }
+  if(body.action==='oracle_release_decline_v1'){
+   must(exact(body,'action'),'BAD_REQUEST');
+   const record=await repo.getFirstPolicy();await registered(repo,id,record?.policy?.reviewer_key_sha256,now,owner);
+   const r=await repo.declineRelease(id,record.policy_sha256);must(r?.declined===true,'RELEASE_DECLINE_NOT_RECORDED');
+   return {status:200,body:{...FLAGS,owner_declined:true,explanation:'You chose No. Oracle remains held. This request is for the fixed local-model trial in a disposable workspace; it does not allow general computer control.'}};
+  }
   if(body.action==='oracle_first_reviewer_status_v1'){
    must(exact(body,'action'),'BAD_REQUEST');
    const record=await repo.getFirstPolicy(),policy=await validateFirstPolicy(record,{owner,now});
@@ -180,6 +216,7 @@ export async function handleReleaseGate(body,ctx,repo,now=Date.now()){
    must(ch?.kind==='release'&&fresh(ch,now)&&ch.owner_key_sha256===owner.public_key_sha256,'CHALLENGE_NOT_FRESH');
    must(await hashText(stableJson(ch.payload))===ch.payload_sha256&&ch.payload.nonce===ch.nonce&&ch.payload.owner_user_id===id,'CHALLENGE_BINDING_MISMATCH');
    const k=await registered(repo,id,ch.reviewer_key_sha256,now,owner);
+   if(k.trust_basis===FIRST_BASIS){must(!k.owner_bootstrap_record.owner_declined_at,'RELEASE_OWNER_DECLINED');await releaseStored(ch,k.owner_bootstrap_record,owner,now);}
    const verdict=await verifyReleaseEvidence({payload:ch.payload,owner_signature_b64url:body.owner_signature_b64url,nanny_signature_b64url:body.nanny_signature_b64url,authenticated_owner_id:id,trusted_owner_key:owner,trusted_nanny_key:k,nonce_issued_by_gate:true,nonce_consumed:false,now});
    const r=await repo.recordEvidence({challenge:ch,owner_signature_b64url:body.owner_signature_b64url,nanny_signature_b64url:body.nanny_signature_b64url,verdict});
    must(r?.inserted===true,'REPLAY_REVOKED_OR_STALE_EVIDENCE');

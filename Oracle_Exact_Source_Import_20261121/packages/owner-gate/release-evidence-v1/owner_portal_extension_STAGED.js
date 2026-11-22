@@ -4,9 +4,11 @@ const ownerApi=async(path,body)=>{
  catch(e){if(session?.refresh_token&&/invalid.*jwt|token.*expired|unauthorized|401/i.test(String(e.message))){await refresh();return api(BASE+'/functions/v1/'+path,body);}throw e;}
 };
 import('./release-evidence-v1/guided_first_key.mjs').then(async({mountGuidedFirstKey})=>{
+ const releaseOptions={origin:location.origin,api:body=>ownerApi('batcave-change-gate-v1',body),getOwnerId:()=>session?.user?.id,getOwnerKey:()=>getKey(session.user.id)};
  const root=mountGuidedFirstKey({
   origin:location.origin,api:body=>ownerApi('batcave-change-gate-v1',body),proofApi:body=>ownerApi('batcave-first-proof-v1',body),
   getOwnerId:()=>session?.user?.id,getOwnerEmail:()=>session?.user?.email,
+  onRegistered:async(parent)=>{const {mountGuidedRelease}=await import('./release-evidence-v1/guided_release.mjs');const release=mountGuidedRelease({...releaseOptions,parent});parent.insertBefore(release,parent.querySelector('[data-done]'));parent.querySelector('h1').textContent='Oracle approval';parent.querySelector('[data-done]').hidden=true;},
   getOwnerKey:()=>{if(!session?.user?.id)throw Error('Sign in with your existing Batcave account.');return getKey(session.user.id);}
  });
  try{const {mountPhoneAlerts}=await import('./phone-alert-v1/phone_alert_client.mjs');

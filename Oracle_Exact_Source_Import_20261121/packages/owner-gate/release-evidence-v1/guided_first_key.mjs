@@ -118,7 +118,7 @@ export function mountGuidedFirstKey(options){
  }else document.body.append(root);
  const unrelated=document.getElementById('sendOracleCode');if(unrelated)unrelated.hidden=true;
  const css=document.createElement('link');css.rel='stylesheet';css.href='/release-evidence-v1/guided_first_key.css';document.head.append(css);
- const q=s=>root.querySelector(s);let mode=window.matchMedia('(max-width: 700px)').matches?'phone':'cortana',state=null,busy=false,lastCommandNonce=null,lastProofNonce=null,disposed=false,showAuth=false;
+ const q=s=>root.querySelector(s);let mode=window.matchMedia('(max-width: 700px)').matches?'phone':'cortana',state=null,busy=false,lastCommandNonce=null,lastProofNonce=null,disposed=false,showAuth=false,registeredNotified=false;
  const message=s=>{q('[data-message]').textContent=s;};
  function paint(){
   const done=state?.reviewer_registered===true;
@@ -136,7 +136,7 @@ export function mountGuidedFirstKey(options){
   if(!pending){q('[data-command]').value='';q('[data-proof]').value='';lastCommandNonce=null;lastProofNonce=null;q('[data-wait]').textContent='Approve on your phone when Cortana is ready, then copy the new confirmation command.';}
   q('[data-transfer-wait]').textContent=pending&&lastProofNonce===pending.payload.nonce?'Cortana’s public confirmation arrived. Select Finish enrollment.':'Waiting for Cortana’s confirmation.';
  }
- async function refresh(){if(busy||disposed)return;try{state=await actions.refresh();paint();if(state?.endorsement&&lastCommandNonce!==state.endorsement.payload.nonce){q('[data-command]').value=await actions.command();lastCommandNonce=state.endorsement.payload.nonce;}if(state?.endorsement&&lastProofNonce!==state.endorsement.payload.nonce){const proof=await actions.received();if(proof){q('[data-proof]').value=JSON.stringify(proof);lastProofNonce=state.endorsement.payload.nonce;paint();}}}catch(e){if(/401|JWT|token|sign in/i.test(String(e.message)))showAuth=true;paint();message(friendly(e));}}
+ async function refresh(){if(busy||disposed)return;try{state=await actions.refresh();paint();if(state?.reviewer_registered&&!registeredNotified){registeredNotified=true;await options.onRegistered?.(root);}if(state?.endorsement&&lastCommandNonce!==state.endorsement.payload.nonce){q('[data-command]').value=await actions.command();lastCommandNonce=state.endorsement.payload.nonce;}if(state?.endorsement&&lastProofNonce!==state.endorsement.payload.nonce){const proof=await actions.received();if(proof){q('[data-proof]').value=JSON.stringify(proof);lastProofNonce=state.endorsement.payload.nonce;paint();}}}catch(e){if(/401|JWT|token|sign in/i.test(String(e.message)))showAuth=true;paint();message(friendly(e));}}
  async function act(fn){busy=true;paint();try{await fn();message('');}catch(e){message(friendly(e));}finally{busy=false;await refresh();paint();}}
  q('[data-account-controls]').onclick=()=>{showAuth=!showAuth;paint();};
  q('[data-phone-mode]').onclick=()=>{mode='phone';paint();};q('[data-cortana-mode]').onclick=()=>{mode='cortana';paint();};

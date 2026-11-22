@@ -29,9 +29,9 @@ class FirstLedgerTests(unittest.TestCase):
         text=stable(self.policy);self.policy_hash=digest(text)
         query(f'INSERT INTO batcave.oracle_first_reviewer_v1(policy,canonical_policy,policy_sha256) VALUES({literal(text)}::jsonb,{literal(text)},{literal(self.policy_hash)});')
 
-    def challenge(self,kind='first_key',expired=False,changed_policy=False):
+    def challenge(self,kind='first_key',expired=False,changed_policy=False,issued_now=False):
         ident=str(uuid.uuid4());now=dt.datetime.now(dt.timezone.utc)
-        issued=now-dt.timedelta(minutes=2) if expired else now-dt.timedelta(seconds=1)
+        issued=now-dt.timedelta(minutes=2) if expired else now if issued_now else now-dt.timedelta(seconds=1)
         expires=now-dt.timedelta(seconds=1) if expired else now+dt.timedelta(minutes=4)
         nonce=uuid.uuid4().hex
         if kind=='first_key':

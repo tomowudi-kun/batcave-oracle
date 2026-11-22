@@ -34,7 +34,7 @@ jobs:
       - name: Test independent release evidence (stage only)
         working-directory: Oracle_Exact_Source_Import_20261121/packages/owner-gate/release-evidence-v1
         run: |
-          node --test test_release_approval_v1.mjs test_signer_bootstrap.mjs test_release_gate.mjs test_release_owner_panel.mjs test_first_reviewer.mjs test_guided_first_key.mjs test_prepare_release_review.mjs
+          node --test test_release_approval_v1.mjs test_signer_bootstrap.mjs test_release_gate.mjs test_release_owner_panel.mjs test_first_reviewer.mjs test_guided_first_key.mjs test_prepare_release_review.mjs test_release_sync.mjs
       - name: Test phone notification transport
         working-directory: Oracle_Exact_Source_Import_20261121/packages/owner-gate/phone-alert-v1
         run: node --test test_notification_core.mjs test_service_worker.mjs
@@ -74,4 +74,5 @@ jobs:
           python3 test_first_ledger.py
           python3 ../phone-alert-v1/test_notification_ledger.py
           python3 ../proof-transfer-v1/test_proof_ledger.py
+          python3 test_release_sync_ledger.py
           python3 test_lab_grant_lease.py

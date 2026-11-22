@@ -2,6 +2,7 @@
 import {withSupabase} from 'npm:@supabase/server';
 import postgres from 'npm:postgres@3.4.5';
 import {submitPublicProof,inspectPublicProof,ownerProofStatus,FLAGS} from './proof_transfer_core.mjs';
+import {submitReleaseReview} from './release_review_core.mjs';
 import {proofRepository} from './repository.mjs';
 const sql=postgres(Deno.env.get('SUPABASE_DB_URL')!,{prepare:false,max:1,connect_timeout:5,idle_timeout:4}),repo=proofRepository(sql);
 const ORIGIN='https://batcave-linux-approval.vercel.app';
@@ -29,6 +30,7 @@ export default {fetch:async(req:Request)=>{
  try{
   // Submission authenticates both genuine signatures over the private gate's exact current challenge.
   // It stores public evidence only; it cannot activate a reviewer or change any gate.
+  if(body?.op==='submit_release'){const r=await submitReleaseReview(body,repo,Date.now(),report);return reply(r.body,r.status,origin);}
   if(body?.op==='submit'){const r=await submitPublicProof(body,repo,Date.now(),report);return reply(r.body,r.status,origin);}
   if(body?.op==='inspect'){const r=await inspectPublicProof(body,repo,report);return reply(r.body,r.status,origin);}
   if(body?.op!=='status')return reply({...FLAGS,error:'UNSUPPORTED_ACTION'},403,origin);
