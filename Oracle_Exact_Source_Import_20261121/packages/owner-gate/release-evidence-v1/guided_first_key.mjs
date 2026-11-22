@@ -124,7 +124,7 @@ export function mountGuidedFirstKey(options){
   const done=state?.reviewer_registered===true;
   q('[data-account]').textContent=options.getOwnerId()?'Signed in'+(options.getOwnerEmail?.()?' as '+options.getOwnerEmail():''):'Sign in above with your existing Batcave account.';
   if(auth)auth.hidden=!!options.getOwnerId()&&!showAuth;
-  q('[data-phone]').hidden=done||mode!=='phone';q('[data-cortana]').hidden=done||mode!=='cortana';q('[data-done]').hidden=!done;
+  q('[data-phone]').hidden=done||mode!=='phone';q('[data-cortana]').hidden=done||mode!=='cortana';q('[data-done]').hidden=!done||!!root.querySelector('#guided-release');
   q('[data-phone-mode]').setAttribute('aria-pressed',String(mode==='phone'));q('[data-cortana-mode]').setAttribute('aria-pressed',String(mode==='cortana'));
   const pending=state?.endorsement;
   q('[data-confirm]').hidden=!pending;q('[data-wait]').hidden=!!pending;
@@ -139,7 +139,7 @@ export function mountGuidedFirstKey(options){
  async function refresh(){if(busy||disposed)return;try{state=await actions.refresh();paint();if(state?.reviewer_registered&&!registeredNotified){registeredNotified=true;await options.onRegistered?.(root);}if(state?.endorsement&&lastCommandNonce!==state.endorsement.payload.nonce){q('[data-command]').value=await actions.command();lastCommandNonce=state.endorsement.payload.nonce;}if(state?.endorsement&&lastProofNonce!==state.endorsement.payload.nonce){const proof=await actions.received();if(proof){q('[data-proof]').value=JSON.stringify(proof);lastProofNonce=state.endorsement.payload.nonce;paint();}}}catch(e){if(/401|JWT|token|sign in/i.test(String(e.message)))showAuth=true;paint();message(friendly(e));}}
  async function act(fn){busy=true;paint();try{await fn();message('');}catch(e){message(friendly(e));}finally{busy=false;await refresh();paint();}}
  q('[data-account-controls]').onclick=()=>{showAuth=!showAuth;paint();};
- q('[data-phone-mode]').onclick=()=>{mode='phone';paint();};q('[data-cortana-mode]').onclick=()=>{mode='cortana';paint();};
+ q('[data-phone-mode]').onclick=()=>{mode='phone';paint();root.dispatchEvent(new CustomEvent('batcave-device-mode',{detail:{mode}}));};q('[data-cortana-mode]').onclick=()=>{mode='cortana';paint();root.dispatchEvent(new CustomEvent('batcave-device-mode',{detail:{mode}}));};
  q('[data-decline]').onclick=()=>act(async()=>{const r=await actions.decline();state=await actions.refresh();q('[data-phone-result]').textContent=r.explanation;root.dispatchEvent(new CustomEvent('batcave-owner-decision'));});
  q('[data-approve]').onclick=()=>act(async()=>{state=await actions.approve();root.dispatchEvent(new CustomEvent('batcave-owner-decision'));});
  q('[data-copy]').onclick=()=>act(async()=>{const text=await actions.command();q('[data-command]').value=text;await navigator.clipboard.writeText(text);q('[data-wait]').textContent='Command copied. Use the black reviewer PowerShell window.';});

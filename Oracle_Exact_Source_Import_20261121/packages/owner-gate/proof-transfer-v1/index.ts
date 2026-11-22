@@ -20,7 +20,7 @@ const ownerHandler=withSupabase({auth:'user'},async(req:any,ctx:any)=>{
 export default {fetch:async(req:Request)=>{
  const origin=req.headers.get('origin')||'';
  if(req.method==='GET'&&new URL(req.url).pathname.endsWith('/health')){
-  try{const checks=await repo.readiness(),ready=Object.values(checks).every(v=>v===true);return reply({...FLAGS,public_proof_transfer_ready:ready,checks},ready?200:503,origin);}
+  try{const checks={...await repo.readiness(),...await repo.releaseReadiness()},ready=Object.values(checks).every(v=>v===true);return reply({...FLAGS,public_proof_transfer_ready:ready,release_review_transfer_ready:ready,checks},ready?200:503,origin);}
   catch{return reply({...FLAGS,public_proof_transfer_ready:false,error:'PROOF_DATABASE_UNAVAILABLE'},503,origin);}
  }
  if(origin&&origin!==ORIGIN)return reply({...FLAGS,error:'ORIGIN_DENIED'},403);

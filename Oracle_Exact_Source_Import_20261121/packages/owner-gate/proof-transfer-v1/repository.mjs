@@ -9,6 +9,7 @@ export function normalizeContext(ctx){
  return {...ctx,root,challenge:normalized(ctx.challenge)};
 }
 export function proofRepository(sql){return {
+ releaseReadiness:async()=>(await sql`SELECT has_table_privilege(current_user,'batcave.oracle_release_public_reviews_v1','SELECT') AND has_table_privilege(current_user,'batcave.oracle_release_public_reviews_v1','INSERT') AS release_review_access, has_function_privilege(current_user,'batcave.oracle_release_store_review_v1(uuid,text,jsonb,text)','EXECUTE') AS release_store_execute`)[0],
  readiness:async()=>(await sql`SELECT
   jsonb_typeof(${sql.json({public_probe:true})}::jsonb)='object' AS store_parameter_object,
   has_schema_privilege(current_user,'batcave','USAGE') AS schema_usage,

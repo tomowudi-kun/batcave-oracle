@@ -95,7 +95,7 @@ export function mountGuidedRelease(options){
  const actions=guidedReleaseActions(options),root=document.createElement('section');root.id='guided-release';
  root.innerHTML='<h2>Allow Oracle’s first local AI trial?</h2><p>Oracle will generate and test one fixed sample in a disposable workspace. This request does not permit general computer control.</p><div data-release-phone><button data-release-yes>Yes</button><button data-release-no>No</button></div><p data-release-result role="status" aria-live="polite"></p><div data-release-cortana hidden><p>Use the black StrictNannyReviewer window to review the prepared release files with your existing key.</p><textarea data-release-command readonly rows="5" aria-label="Cortana release review command"></textarea><button data-release-copy>Copy release review command</button></div><button data-release-refresh>Refresh release status</button><p data-release-error role="status" aria-live="polite"></p>';
  options.parent.append(root);const q=s=>root.querySelector(s);let state,busy=false,disposed=false,commandNonce=null;
- const phone=window.matchMedia('(max-width: 700px)').matches;
+ let phone=window.matchMedia('(max-width: 700px)').matches;
  function paint(){
   const pending=!!state?.envelope,done=state?.release_review_recorded===true;
   q('[data-release-phone]').hidden=!phone||done;q('[data-release-cortana]').hidden=phone||!pending||done;
@@ -107,15 +107,16 @@ export function mountGuidedRelease(options){
  async function refresh(){
   if(busy||disposed)return;
   try{
-   state=await actions.refresh();paint();
+   state=await actions.refresh();if(state?.release_review_recorded)q('[data-release-error]').textContent='';paint();
    if(state?.envelope&&!phone&&commandNonce!==state.envelope.payload.nonce){q('[data-release-command]').value=await actions.command();commandNonce=state.envelope.payload.nonce;}
    if(state?.envelope&&state.review){busy=true;paint();try{state=await actions.finish();}finally{busy=false;}paint();}
   }catch(e){q('[data-release-error]').textContent=e.message;}
  }
  async function act(fn){busy=true;paint();try{await fn();q('[data-release-error]').textContent='';root.dispatchEvent(new CustomEvent('batcave-owner-decision',{bubbles:true}));}catch(e){q('[data-release-error]').textContent=e.message;}finally{busy=false;await refresh();}}
+ const deviceMode=event=>{phone=event.detail?.mode==='phone';paint();};options.parent.addEventListener('batcave-device-mode',deviceMode);
  q('[data-release-yes]').onclick=()=>act(async()=>{state=await actions.approve();});
  q('[data-release-no]').onclick=()=>act(async()=>{await actions.decline();});
  q('[data-release-copy]').onclick=()=>act(async()=>{const c=await actions.command();q('[data-release-command]').value=c;await navigator.clipboard.writeText(c);q('[data-release-result]').textContent='Copied. Paste into the black reviewer window.';});
  q('[data-release-refresh]').onclick=refresh;paint();refresh();const poll=setInterval(()=>{if(document.visibilityState==='visible'&&!state?.release_review_recorded)refresh();},5000);
- root.dispose=()=>{disposed=true;clearInterval(poll);};return root;
+ root.dispose=()=>{disposed=true;clearInterval(poll);options.parent.removeEventListener('batcave-device-mode',deviceMode);};return root;
 }
