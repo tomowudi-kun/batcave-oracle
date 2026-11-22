@@ -10,6 +10,7 @@ import { handleOracleLabOwnerRequest } from './owner_gate_core.mjs';
 import { handleReleaseGate } from './release_gate_core.mjs';
 import { releaseRepository } from './release_repository.mjs';
 import { labRepository } from './lab_repository.mjs';
+import { inspectGeneralControlLivePreflightSTAGED } from './general_control_live_preflight_STAGED.mjs';
 const releaseActions = new Set(['oracle_release_status_v1','oracle_release_endorse_v1','oracle_release_decline_v1','oracle_first_reviewer_decline_v1','oracle_first_reviewer_status_v1','oracle_first_reviewer_endorse_v1','oracle_first_reviewer_challenge_v1','oracle_first_reviewer_register_v1','oracle_release_enrollment_challenge_v1','oracle_release_enroll_reviewer_v1','oracle_release_challenge_v1','oracle_release_record_evidence_v1']);
 const allowedOrigins = new Set([
  'https://batcave-cloud-control.vercel.app',
@@ -67,6 +68,20 @@ export default {
   try{const raw=await req.text();if(raw.length>8500)return respond({error:'payload_too_large'},413,origin);body=JSON.parse(raw);}
   catch{return respond({error:'bad_json'},400,origin);}
   try{
+   // READ-ONLY preflight for the future phone route. NOT a general-control
+   // signer, privileged release, action dispatcher or policy-mode change.
+   // There is no enabled general-control Yes/No mutation route in this entry.
+   if(body?.action==='general_control_preflight_v1'){
+    if(origin!=='https://batcave-linux-approval.vercel.app')
+     return respond({error:'original_owner_origin_required',
+      deployment_authorized:false,execution_authorized:false},403,origin);
+    const pinned=Deno.env.get('BATCAVE_GENERAL_CONTROL_REVIEWED_SOURCE_SHA')||'';
+    if(!/^[a-f0-9]{40}$/.test(pinned))
+     return respond({error:'reviewed_source_pin_unconfigured',
+      deployment_authorized:false,execution_authorized:false},503,origin);
+    const facts=await inspectGeneralControlLivePreflightSTAGED(labSql,ctx.userClaims.id,pinned);
+    return respond(facts,200,origin);
+   }
    const ownerContext={owner_user_id:ctx.userClaims.id,owner_authenticated:true};
    const result=releaseActions.has(body?.action)
      ? await handleReleaseGate(body,ownerContext,releaseRepository(labSql))
