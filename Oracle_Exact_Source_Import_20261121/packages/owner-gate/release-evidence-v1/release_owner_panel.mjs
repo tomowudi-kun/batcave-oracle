@@ -3,6 +3,7 @@
  * Preparing does not sign; signing requires a separate explicit local button.
  */
 import {PIN,SCHEMA,OWNER_DOMAIN,canonicalReleaseText} from './verify_release_approval_v1.mjs';
+import {mountGeneralControlPhonePanelV1} from './general_control_phone_panel_v1.mjs';
 import {ENROLL_DOMAIN,canonicalEnrollmentText} from './release_gate_core.mjs';
 import {FIRST_BASIS,FIRST_OWNER_DOMAIN,FIRST_PROOF_DOMAIN,firstStable,firstHash,canonicalFirstText,validateFirstPayload,firstVerifySignature} from './first_reviewer_protocol.mjs';
 export function releaseOwnerActions({api,getOwnerId,getOwnerKey,origin,getTrustedOwner,now=Date.now}){
@@ -88,5 +89,16 @@ export function mountReleasePanel(options){
   show('Owner challenge saved. Review it locally under the isolated Cortana account before it expires.');find('[data-record]').disabled=false;
  });
  on('[data-record]',async()=>{if(!envelope)throw Error('Sign the displayed challenge first.');show(await actions.recordReview(envelope,await load('[data-review]'),candidate.public_key_sha256));});
+ // This opt-in path stays OFF until the authenticated backend supplies ALL
+ // three private, scoped callbacks. Do not turn on by reusing fixed-lab APIs.
+ if(options.generalControl){
+  const c=options.generalControl;
+  mountGeneralControlPhonePanelV1({
+   root,doc:document,origin:options.origin,
+   getOwnerId:options.getOwnerId,getOwnerKey:options.getOwnerKey,
+   prepareChallenge:c.prepareChallenge,recordOwnerEvidence:c.recordOwnerEvidence,
+   declineChallenge:c.declineChallenge,now:options.now||Date.now,
+  });
+ }
  return root;
 }
