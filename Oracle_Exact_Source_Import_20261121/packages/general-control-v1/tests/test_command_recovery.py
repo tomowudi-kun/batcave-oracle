@@ -155,6 +155,25 @@ class CommandRecoveryTests(unittest.TestCase):
         self.assertEqual(results, ['t','t'])
         self.assertEqual(self.state()['events'], 1)
 
+    def test_concurrent_conflicting_completions_only_one_wins(self):
+        # Two competing terminal outcomes must never both be acknowledged.
+        self.assertEqual(self.start(), 't')
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            first = pool.submit(self.finish, value='{"winner":"A"}', success='true')
+            second = pool.submit(self.finish, value='{"winner":"B"}', success='false')
+            results = [first.result(), second.result()]
+        self.assertEqual(sorted(results), ['f', 't'])
+        s = self.state()
+        self.assertEqual(s['events'], 1)
+        self.assertEqual(s['result'], s['receipt_result'])
+        self.assertIn(s['result']['winner'], ('A', 'B'))
+        self.assertEqual(s['status'], 'succeeded' if s['result']['winner'] == 'A' else 'failed')
+        self.assertEqual(self.finish(value='{"winner":"A"}', success='true'),
+                         't' if s['result']['winner'] == 'A' else 'f')
+        self.assertEqual(self.finish(value='{"winner":"B"}', success='false'),
+                         't' if s['result']['winner'] == 'B' else 'f')
+        self.assertEqual(self.state()['events'], 1)
+
     def test_failed_result_is_also_idempotent(self):
         self.assertEqual(self.start(), 't')
         self.assertEqual(self.finish(success='false'), 't')
