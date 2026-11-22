@@ -72,7 +72,7 @@ async function evidence(ch,t=now) {
 test('fails closed before authenticated owner and original origin; no persistence',async()=>{
  const f=fixture();
  for(const identity of [{...ctx,owner_authenticated:false},{...ctx,origin:'https://evil.org'},
-   {...ctx,owner_user_id:'123e4567-e89b-42d3-a456-426614174999'}]){
+   {...ctx,owner_user_id:'not-a-uuid'}]){
    const out=await handle(actionPrepare,identity,f.repo,now);
    assert.equal(out.status,401);assert.equal(out.body.execution_authorized,false);
  }
