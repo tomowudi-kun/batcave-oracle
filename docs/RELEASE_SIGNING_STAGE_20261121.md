@@ -127,3 +127,14 @@ testing receipt, not a second master or an approval.
 - Rollback: revert the source continuation; no live change to undo.
 
 Correction receipt: first CI source job passed, PostgreSQL setup rejected a generated hash due to STABLE convert_to. The checked-digest fix and raw/SPKI lab-key alias denial are in the next code commit; final corrected code commit a7edf39f82224a80c5fa350437e95d420fdac367 passed GitHub run 44954029074. Source job 136998038345 passed 62 Node signing tests plus the existing 20 owner-gate Node, 8 owner-gate contract and 35 worker tests. Both jobs independently read back SUCCESS. This receipt update changes documentation only.
+
+
+## Approval interface simplification — DRAFT, 2026-11-21 Eastern
+
+The owner requested a single phone Yes/No question, with No stopping the request and displaying why it was requested. The same existing owner-authenticated page now has a guided enrollment panel in source: saved public candidate lookup, explicit existing-key Yes, persistent public owner endorsement, and the same-owner Cortana page retrieving that endorsement. Cortana can finish with genuine existing candidate possession proof without holding the phone's owner private key. No chat/file relay or replacement keys. One-time local passphrase/possession is still required by the installed signer.
+
+No withdraws pending first-key nonces and records a permanent issuance cutoff; a subsequent Yes needs a fresh challenge, so an older signed pair cannot be resurrected. Stored endorsements remain immutable and grant no authority. Original JWT checks, signature verification, expiry and independent release review remain. Local Node verification: 91 PASS. Actual PostgreSQL checks and deployment pending for this source revision.
+
+Requested next surface: reuse the existing phone Dr. Doom status indicator or Batcave notification to open the original owner-key origin, display one plain request and accept Yes or No. A link/notification click must not sign automatically; the visible Yes uses the existing key. No cancels only the pending request and explains its purpose. The actual phone background delivery path is UNKNOWN, not installed or verified by this change. The available historical native bridge source is a timed debugging companion and has no network permission; do not replace the current phone app with that older source.
+
+Rollback: restore captured v7 gate source and original-origin portal deployment dpl_2t47vg5NkrXwERDNf3nNNuT1VbWh. Keep additive private evidence columns and denial cutoff; do not revert a recorded No into usable old consent, reset a registered root or recreate keys. Oracle remains HELD, all eight rules SHADOW, no grants/merges/deployment.

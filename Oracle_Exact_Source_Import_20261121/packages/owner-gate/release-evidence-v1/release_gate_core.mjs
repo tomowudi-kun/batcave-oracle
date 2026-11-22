@@ -4,7 +4,7 @@
  * No attestation writer, deployer, command dispatcher or executable grants here.
  */
 import {PIN,SCHEMA,OWNER_DOMAIN,canonicalReleaseText,verifyReleaseEvidence} from './verify_release_approval_v1.mjs';
-import {FIRST_BASIS,FIRST_SCHEMA,FIRST_OWNER_DOMAIN,canonicalFirstText,validateFirstPolicy,verifyFirstPair,verifyRegisteredFirstReviewer} from './first_reviewer_protocol.mjs';
+import {FIRST_BASIS,FIRST_SCHEMA,FIRST_OWNER_DOMAIN,canonicalFirstText,validateFirstPolicy,verifyFirstPair,verifyFirstOwner,verifyRegisteredFirstReviewer} from './first_reviewer_protocol.mjs';
 export const ENROLL_DOMAIN='batcave.oracle.independent_nanny.enrollment.owner.v1\n';
 const UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 const HEX=/^[a-f0-9]{64}$/;
@@ -73,12 +73,46 @@ async function newChallenge(repo,args){
  must(UUID.test(r?.id)&&r.nonce===args.nonce&&r.payload_sha256===args.payload_sha256&&r.owner_user_id===args.owner_user_id,'CHALLENGE_NOT_RECORDED');
  return r;
 }
+function firstEnvelope(ch,record){return {schema:'batcave.oracle.first_reviewer.owner_endorsement.v1',issuer:'batcave-control',challenge_id:ch.id,policy:record.policy,policy_sha256:record.policy_sha256,payload:ch.payload,owner_signature_b64url:ch.pending_owner_signature_b64url};}
+async function firstStored(ch,record,policy,owner,now){
+ must(ch?.kind==='first_key'&&!ch.withdrawn_at&&(!record.last_owner_declined_at||Date.parse(ch.issued_at)>Date.parse(record.last_owner_declined_at))&&fresh(ch,now)&&ch.owner_user_id===owner.owner_user_id&&ch.owner_key_sha256===owner.public_key_sha256&&ch.policy_sha256===record.policy_sha256&&ch.reviewer_key_sha256===policy.reviewer_key_sha256,'CHALLENGE_NOT_FRESH');
+ const c=await candidate(ch.candidate,owner);
+ must(c.record_sha256===policy.candidate_sha256&&c.host_identity_sha256===policy.host_identity_sha256&&await hashText(stableJson(ch.payload))===ch.payload_sha256&&ch.payload.nonce===ch.nonce&&ch.payload.issued_at===ch.issued_at&&ch.payload.expires_at===ch.expires_at,'FIRST_RECEIPT_BINDING');
+}
 export async function handleReleaseGate(body,ctx,repo,now=Date.now()){
  try{
   must(ctx?.owner_authenticated===true&&UUID.test(ctx.owner_user_id),'OWNER_AUTH_REQUIRED');
   must(body&&typeof body==='object'&&!Array.isArray(body)&&typeof body.action==='string','BAD_REQUEST');
   const id=ctx.owner_user_id,owner=await ownerKey(repo,id);
   const i=await intent(repo,now);
+  const publicOwner={role:'owner',owner_user_id:id,public_key_b64url:owner.public_key_b64url,public_key_sha256:owner.public_key_sha256,revoked_at:null,registered:true,valid_until:null};
+  if(body.action==='oracle_first_reviewer_status_v1'){
+   must(exact(body,'action'),'BAD_REQUEST');
+   const record=await repo.getFirstPolicy(),policy=await validateFirstPolicy(record,{owner,now});
+   if(record.registered_at!==null){await registered(repo,id,policy.reviewer_key_sha256,now,owner);return {status:200,body:{...FLAGS,reviewer_registered:true,independently_attested:false,owner:publicOwner}};}
+   const c=await repo.getFirstCandidate(id,record.policy_sha256);
+   if(c){const info=await candidate(c,owner);must(info.record_sha256===policy.candidate_sha256&&info.host_identity_sha256===policy.host_identity_sha256&&c.public_key_b64url===policy.reviewer_public_key_b64url&&c.public_key_sha256===policy.reviewer_key_sha256,'FIRST_CANDIDATE_NOT_PINNED');}
+   const ch=record.owner_declined_at?null:await repo.getPendingFirstEndorsement(id,record.policy_sha256);
+   let endorsement=null;
+   if(ch){await firstStored(ch,record,policy,owner,now);await verifyFirstOwner({payload:ch.payload,record,owner,owner_signature_b64url:ch.pending_owner_signature_b64url,now});endorsement=firstEnvelope(ch,record);}
+   return {status:200,body:{...FLAGS,reviewer_registered:false,independently_attested:false,candidate:c,endorsement,owner:publicOwner,owner_declined:!!record.owner_declined_at,explanation:'This connects the separate Cortana reviewer key. Oracle stays held until its later release review.',observed_at:new Date(now).toISOString()}};
+  }
+  if(body.action==='oracle_first_reviewer_decline_v1'){
+   must(exact(body,'action'),'BAD_REQUEST');
+   const record=await repo.getFirstPolicy();await validateFirstPolicy(record,{owner,now,requireUnused:true});
+   const r=await repo.declineFirstEnrollment(id,record.policy_sha256);must(r?.declined===true,'FIRST_DECLINE_NOT_RECORDED');
+   return {status:200,body:{...FLAGS,owner_declined:true,reviewer_registered:false,explanation:'You chose No. Enrollment is stopped. Batcave requested approval to recognize the separate Cortana reviewer; Oracle remains held.'}};
+  }
+  if(body.action==='oracle_first_reviewer_endorse_v1'){
+   must(exact(body,'action|challenge_id|owner_signature_b64url')&&UUID.test(body.challenge_id),'BAD_REQUEST');
+   const record=await repo.getFirstPolicy(),policy=await validateFirstPolicy(record,{owner,now,requireUnused:true});
+   must(await repo.countExistingReviewers()===0,'FIRST_PRIVILEGED_REVIEWER_EXISTS');
+   const ch=await repo.getFirstChallenge(id,body.challenge_id);await firstStored(ch,record,policy,owner,now);
+   await verifyFirstOwner({payload:ch.payload,record,owner,owner_signature_b64url:body.owner_signature_b64url,now});
+   const r=await repo.saveFirstEndorsementVerified({challenge:ch,owner_signature_b64url:body.owner_signature_b64url});
+   must(r?.saved===true,'FIRST_ENDORSEMENT_STALE_OR_CHANGED');
+   return {status:200,body:{...FLAGS,owner_endorsement_saved:true,reviewer_registered:false,independently_attested:false}};
+  }
   if(body.action==='oracle_first_reviewer_challenge_v1'){
    must(exact(body,'action|candidate'),'BAD_REQUEST');
    const record=await repo.getFirstPolicy(),policy=await validateFirstPolicy(record,{owner,now,requireUnused:true});
@@ -96,8 +130,9 @@ export async function handleReleaseGate(body,ctx,repo,now=Date.now()){
    must(exact(body,'action|challenge_id|owner_signature_b64url|proof_signature_b64url')&&UUID.test(body.challenge_id),'BAD_REQUEST');
    const record=await repo.getFirstPolicy(),policy=await validateFirstPolicy(record,{owner,now,requireUnused:true});
    must(await repo.countExistingReviewers()===0,'FIRST_PRIVILEGED_REVIEWER_EXISTS');
+   must(!record.owner_declined_at,'FIRST_OWNER_DECLINED');
    const ch=await repo.getFirstChallenge(id,body.challenge_id);
-   must(ch?.kind==='first_key'&&fresh(ch,now)&&ch.owner_user_id===id&&ch.owner_key_sha256===owner.public_key_sha256&&ch.policy_sha256===record.policy_sha256&&ch.reviewer_key_sha256===policy.reviewer_key_sha256,'CHALLENGE_NOT_FRESH');
+   must(ch?.kind==='first_key'&&!ch.withdrawn_at&&(!record.last_owner_declined_at||Date.parse(ch.issued_at)>Date.parse(record.last_owner_declined_at))&&fresh(ch,now)&&ch.owner_user_id===id&&ch.owner_key_sha256===owner.public_key_sha256&&ch.policy_sha256===record.policy_sha256&&ch.reviewer_key_sha256===policy.reviewer_key_sha256,'CHALLENGE_NOT_FRESH');
    const c=await candidate(ch.candidate,owner);
    must(c.record_sha256===policy.candidate_sha256&&c.host_identity_sha256===policy.host_identity_sha256&&await hashText(stableJson(ch.payload))===ch.payload_sha256&&ch.payload.nonce===ch.nonce&&ch.payload.issued_at===ch.issued_at&&ch.payload.expires_at===ch.expires_at,'FIRST_RECEIPT_BINDING');
    await verifyFirstPair({payload:ch.payload,record,owner,owner_signature_b64url:body.owner_signature_b64url,proof_signature_b64url:body.proof_signature_b64url,now});

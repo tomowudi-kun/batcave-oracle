@@ -5,7 +5,7 @@
 import {PIN,SCHEMA,OWNER_DOMAIN,canonicalReleaseText} from './verify_release_approval_v1.mjs';
 import {ENROLL_DOMAIN,canonicalEnrollmentText} from './release_gate_core.mjs';
 import {FIRST_BASIS,FIRST_OWNER_DOMAIN,FIRST_PROOF_DOMAIN,firstStable,firstHash,canonicalFirstText,validateFirstPayload,firstVerifySignature} from './first_reviewer_protocol.mjs';
-export function releaseOwnerActions({api,getOwnerId,getOwnerKey,origin,now=Date.now}){
+export function releaseOwnerActions({api,getOwnerId,getOwnerKey,origin,getTrustedOwner,now=Date.now}){
  if(origin!=='https://batcave-linux-approval.vercel.app')throw Error('Use the original Batcave owner-key origin.');
  function validate(ch,kind){
   const p=ch?.payload;
@@ -23,7 +23,8 @@ export function releaseOwnerActions({api,getOwnerId,getOwnerKey,origin,now=Date.
   const bytes=new Uint8Array(await crypto.subtle.sign('Ed25519',saved.privateKey,new TextEncoder().encode(message)));
   return btoa(String.fromCharCode(...bytes)).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
  }
- async function checkFirst(ch){
+ async function checkFirst(ch,allowTrustedOwner=false){
+  if(allowTrustedOwner&&getTrustedOwner){const owner=await getTrustedOwner();await validateFirstPayload(ch.payload,{policy:ch.policy,policy_sha256:ch.policy_sha256,registered_at:null,revoked_at:null},owner,now());validate(ch,'first');return owner;}
   const saved=await getOwnerKey();
   if(!saved?.publicKeyB64)throw Error('Existing owner public key is required.');
   const raw=Uint8Array.from(atob(saved.publicKeyB64.replace(/-/g,'+').replace(/_/g,'/')+'='.repeat((4-saved.publicKeyB64.length%4)%4)),x=>x.charCodeAt(0));
@@ -43,7 +44,7 @@ export function releaseOwnerActions({api,getOwnerId,getOwnerKey,origin,now=Date.
   },
   signFirstEnrollment:async ch=>{await checkFirst(ch);return {schema:'batcave.oracle.first_reviewer.owner_endorsement.v1',issuer:'batcave-control',challenge_id:ch.challenge_id,policy:ch.policy,policy_sha256:ch.policy_sha256,payload:ch.payload,owner_signature_b64url:await sign(ch,'first')};},
   registerFirstEnrollment:async(e,proof)=>{
-   const ch={...e,signing_message:FIRST_OWNER_DOMAIN+canonicalFirstText(e.payload)},owner=await checkFirst(ch);
+   const ch={...e,signing_message:FIRST_OWNER_DOMAIN+canonicalFirstText(e.payload)},owner=await checkFirst(ch,true);
    await firstVerifySignature(owner,ch.signing_message,e.owner_signature_b64url);
    if(proof?.schema!=='batcave.nanny.first_key.possession.v1'||proof.challenge_id!==e.challenge_id||proof.nonce!==e.payload.nonce||proof.policy_sha256!==e.policy_sha256||proof.reviewer_public_key_sha256!==e.policy.reviewer_key_sha256||proof.independently_attested!==false||proof.deployment_authorized!==false||proof.execution_authorized!==false||proof.grant_issued!==false)throw Error('Possession proof differs from the owner endorsement.');
    await firstVerifySignature({public_key_b64url:e.policy.reviewer_public_key_b64url,public_key_sha256:e.policy.reviewer_key_sha256},FIRST_PROOF_DOMAIN+canonicalFirstText(e.payload),proof.proof_signature_b64url);

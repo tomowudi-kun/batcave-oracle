@@ -104,3 +104,10 @@
 - Rollback: restore captured old Edge source/JWT and prior portal origin. Keep
   private evidence and permanently revoke any future registered root; never
   reset its slot or replace the existing encrypted key.
+
+
+### 2026-11-21 Eastern — phone approval interface
+- Error: exposing first-key cryptographic setup as multiple file downloads, uploads and expiring chat relays confused the owner. Fix: reuse the saved public candidate and same authenticated owner gate; explicit phone Yes saves only public signed evidence for Cortana's same-owner session. No withdraws pending nonces and displays the reason. Existing key possession/signatures still mandatory.
+- Race review: cancelling only the visible page would leave old signed pairs reusable. Fix: private atomic denial, immutable nonce withdrawal, permanent issuance cutoff and consistent row-lock order; real database race tests added.
+- Test invocation initially used a relative path from the wrong working directory; corrected to the package directory and checked the explicit 91-test result. Encoded-slash branch fetch was rejected; used the existing PR head and Git commit API. No repeated blocked route.
+- Phone trigger status: approved Cortana bridge ping independently returned read-only success. Heartbeats and a ping do not prove phone UI/notification control. Historical native bridge has no network capability; actual existing phone indicator integration remains UNKNOWN.

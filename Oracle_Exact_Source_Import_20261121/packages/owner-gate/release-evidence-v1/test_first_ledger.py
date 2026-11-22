@@ -19,6 +19,7 @@ class FirstLedgerTests(unittest.TestCase):
         query('DROP SCHEMA IF EXISTS batcave CASCADE;')
         LedgerTests.setUpClass()
         query(Path(__file__).with_name('first_reviewer_schema_STAGED.sql').read_text())
+        query(Path(__file__).with_name('first_reviewer_sync_STAGED.sql').read_text())
 
     def setUp(self):
         query(f"""TRUNCATE batcave.oracle_first_challenges_v1,batcave.oracle_first_reviewer_v1,batcave.oracle_release_evidence_v1,batcave.oracle_release_challenges_v1,batcave.oracle_release_keys_v1,batcave.oracle_release_custody_v1,batcave.linux_owner_keys_v1,batcave.change_gate_intents CASCADE;
@@ -107,6 +108,82 @@ class FirstLedgerTests(unittest.TestCase):
         c=self.challenge();self.assertTrue(self.finish(c)['inserted'])
         self.assertIn('immutable',query(f"UPDATE batcave.oracle_first_challenges_v1 SET owner_signature_b64url=repeat('C',86) WHERE id='{c[0]}';",ok=False))
         self.assertIn('append-only',query(f"DELETE FROM batcave.oracle_first_challenges_v1 WHERE id='{c[0]}';",ok=False))
+
+
+    def save_endorsement(self,c,sig='A'*86):
+        return json.loads(query(f"SELECT batcave.oracle_first_save_endorsement_v1('{OWNER}','{c[0]}','{c[1]}',{literal(sig)});"))
+
+    def decline(self):
+        return json.loads(query(f"SELECT batcave.oracle_first_decline_v1('{OWNER}','{self.policy_hash}');"))
+
+    def test_saved_endorsement_does_not_consume_or_register(self):
+        c=self.challenge();self.assertTrue(self.save_endorsement(c)['saved'])
+        self.assertEqual(query('SELECT count(*) FROM batcave.oracle_first_challenges_v1 WHERE consumed_at IS NOT NULL;'),'0')
+        self.assertEqual(query('SELECT registered_at IS NULL FROM batcave.oracle_first_reviewer_v1;'),'t')
+        self.assertFalse(self.save_endorsement(c,'C'*86)['saved'])
+        self.assertIn('immutable',query("UPDATE batcave.oracle_first_challenges_v1 SET pending_owner_signature_b64url=NULL;",ok=False))
+        self.assertTrue(self.finish(c)['inserted'])
+
+    def test_no_withdraws_all_prior_nonces_and_stops_saved_pairs(self):
+        a,b=self.challenge(),self.challenge();self.assertTrue(self.save_endorsement(a)['saved'])
+        self.assertTrue(self.decline()['declined'])
+        for c in [a,b]:
+            self.assertFalse(self.finish(c)['inserted'])
+            self.assertFalse(self.save_endorsement(c)['saved'])
+        self.assertEqual(query('SELECT count(*) FROM batcave.oracle_first_challenges_v1 WHERE withdrawn_at IS NOT NULL;'),'2')
+        self.assertIn('immutable',query('UPDATE batcave.oracle_first_challenges_v1 SET withdrawn_at=NULL;',ok=False))
+        self.assertEqual(query(f"SELECT state FROM batcave.change_gate_intents WHERE intent_key='{INTENT}';"),'held')
+
+    def test_new_yes_after_no_only_restores_new_nonce(self):
+        old=self.challenge();self.assertTrue(self.decline()['declined'])
+        # challenge() intentionally backdates issued_at by one second; make this
+        # genuinely new issuance after No rather than adjusting the old row.
+        fresh=self.challenge_after_no()
+        self.assertTrue(self.save_endorsement(fresh)['saved'])
+        self.assertFalse(self.finish(old)['inserted'])
+        self.assertTrue(self.finish(fresh)['inserted'])
+        self.assertFalse(self.decline()['declined'])
+
+    def challenge_after_no(self):
+        c=self.challenge()
+        # Preserve immutability: recreate a synthetic fresh row, never edit it.
+        # Use a transaction time from after the recorded denial in INSERT.
+        raw=query(f"SELECT row_to_json(c) FROM batcave.oracle_first_challenges_v1 c WHERE id='{c[0]}';")
+        r=json.loads(raw);payload=r['payload'];issued=dt.datetime.now(dt.timezone.utc)
+        payload['issued_at']=js_iso(issued);payload['expires_at']=js_iso(issued+dt.timedelta(minutes=4));payload['nonce']=uuid.uuid4().hex
+        text=stable(payload);h=digest(text);ident=str(uuid.uuid4())
+        query(f"INSERT INTO batcave.oracle_first_challenges_v1(id,kind,owner_user_id,owner_key_sha256,reviewer_key_sha256,policy_sha256,nonce,issued_at,expires_at,payload,canonical_payload,payload_sha256,candidate) VALUES('{ident}','first_key','{OWNER}','{'a'*64}','{'b'*64}','{self.policy_hash}','{payload['nonce']}',{literal(payload['issued_at'])},{literal(payload['expires_at'])},{literal(text)}::jsonb,{literal(text)},'{h}',{literal(stable(r['candidate']))}::jsonb);")
+        return ident,h
+
+    def test_signature_saving_rechecks_expiry_rotation_and_revocation(self):
+        self.assertFalse(self.save_endorsement(self.challenge(expired=True))['saved'])
+        c=self.challenge();query(f"UPDATE batcave.linux_owner_keys_v1 SET public_key_sha256='{'f'*64}';")
+        self.assertFalse(self.save_endorsement(c)['saved'])
+        query(f"UPDATE batcave.linux_owner_keys_v1 SET public_key_sha256='{'a'*64}'; UPDATE batcave.oracle_first_reviewer_v1 SET revoked_at=clock_timestamp();")
+        self.assertFalse(self.save_endorsement(c)['saved'])
+        self.assertFalse(self.decline()['declined'])
+
+    def test_no_cutoff_catches_concurrent_insert_that_was_not_in_locked_snapshot(self):
+        self.assertTrue(self.decline()['declined'])
+        old=self.challenge()  # Issued one second before No, inserted after it.
+        self.assertEqual(query(f"SELECT withdrawn_at IS NULL FROM batcave.oracle_first_challenges_v1 WHERE id='{old[0]}';"),'t')
+        self.assertFalse(self.save_endorsement(old)['saved'])
+        fresh=self.challenge_after_no();self.assertTrue(self.save_endorsement(fresh)['saved'])
+        self.assertFalse(self.finish(old)['inserted'])
+        self.assertTrue(self.finish(fresh)['inserted'])
+
+    def test_private_sync_functions_not_callable_by_clients(self):
+        for role in ['anon','authenticated']:
+            for sql in ['SELECT batcave.oracle_first_save_endorsement_v1(NULL,NULL,NULL,NULL)','SELECT batcave.oracle_first_decline_v1(NULL,NULL)']:
+                self.assertIn('permission denied',query(f'SET ROLE {role}; {sql};',ok=False))
+
+    def test_concurrent_no_and_finish_have_one_ordered_result(self):
+        c=self.challenge();self.assertTrue(self.save_endorsement(c)['saved'])
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            no=pool.submit(self.decline);finish=pool.submit(self.finish,c)
+            n,r=no.result(),finish.result()
+        self.assertNotEqual(n['declined'],r['inserted'])
+        self.assertEqual(query('SELECT (registered_at IS NOT NULL)::int + (owner_declined_at IS NOT NULL)::int FROM batcave.oracle_first_reviewer_v1;'),'1')
 
 if __name__=='__main__':
     # Do not rerun imported legacy class here; CI runs its suite separately.
