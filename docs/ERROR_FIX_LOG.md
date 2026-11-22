@@ -111,3 +111,5 @@
 - Race review: cancelling only the visible page would leave old signed pairs reusable. Fix: private atomic denial, immutable nonce withdrawal, permanent issuance cutoff and consistent row-lock order; real database race tests added.
 - Test invocation initially used a relative path from the wrong working directory; corrected to the package directory and checked the explicit 91-test result. Encoded-slash branch fetch was rejected; used the existing PR head and Git commit API. No repeated blocked route.
 - Phone trigger status: approved Cortana bridge ping independently returned read-only success. Heartbeats and a ping do not prove phone UI/notification control. Historical native bridge has no network capability; actual existing phone indicator integration remains UNKNOWN.
+
+- Rollout completed for serving only: gate v8/JWT=true, exact source/HTTP/browser readback; CI 91 signing + 28 PostgreSQL PASS. Oracle still HELD and root UNREGISTERED. Phone Dr. Doom notification delivery BLOCKED; outstanding whitelisted read-only source reads explicitly expired. No host installer, private key or release hold changed.
