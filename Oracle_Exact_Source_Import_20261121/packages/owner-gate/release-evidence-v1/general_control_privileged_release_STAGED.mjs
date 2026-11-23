@@ -11,6 +11,7 @@ export const RELEASE_SCHEMA='batcave.general_control.privileged_release_review.v
 export const RELEASE_DOMAIN='BATCAVE_GENERAL_CONTROL_PRIVILEGED_RELEASE_V1\n';
 const ACTION_PREPARE='general_control_privileged_release_prepare_v1';
 const ACTION_RECORD='general_control_privileged_release_record_v1';
+const INTENT_PREFIX='batcave.general_control.pr3.owner_release_request.v1.';
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const H32=/^[0-9a-f]{32}$/,H40=/^[0-9a-f]{40}$/,H64=/^[0-9a-f]{64}$/,H128=/^[0-9a-f]{128}$/;
 const PREFIX='302a300506032b6570032100';
@@ -36,7 +37,7 @@ export function releaseSigningTextSTAGED(p){
   !H40.test(p.source_commit)||!H64.test(p.policy_digest)||
   !H64.test(p.command_digest)||!H32.test(p.nonce)||!iso(p.issued_at)||
   !iso(p.expires_at)||typeof p.intent_key!=='string'||p.intent_key.length>180||
-  !p.intent_key.startsWith('batcave.general_control.')||
+  p.intent_key!==INTENT_PREFIX+p.source_commit||
   !['Oracle','Cortana'].includes(p.device)||
   !['host.read','host.write_reversible','browser.observe','browser.click','browser.type'].includes(p.capability)||
   typeof p.target_session_id!=='string'||p.target_session_id.length<8||
@@ -83,7 +84,7 @@ async function inspection(requestId,session,services,now){
   throw Error('FRESH_POLICY_AND_TARGET_REQUIRED');
  const result=validateGeneralControlOwnerRequestV1(req,trustedBinding,now);
  if(!H40.test(req.source_commit)||!H64.test(req.policy_digest)||
-  intent?.intent_key!=='batcave.general_control.pr3.owner_release_request.20261122'||
+  intent?.intent_key!==INTENT_PREFIX+req.source_commit||
   intent.state!=='held'||!H64.test(intent.content_sha256)||
   intent.requested_scope?.source_commit!==req.source_commit||
   intent.requested_scope?.policy_digest!==req.policy_digest||
