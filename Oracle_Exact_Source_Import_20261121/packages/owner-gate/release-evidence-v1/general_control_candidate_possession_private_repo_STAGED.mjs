@@ -60,7 +60,7 @@ export function makeCandidatePossessionPrivateRepoSTAGED(sql){
   // One prior non-authorizing draft stored a Windows separator twice (5c5c);
   // canonicalize ONLY that precise spelling for the purpose of PoP lookup.
   // A username string is not trusted custody or attestation.
-  const account=i?.account===String.raw`CORTANA\\\\StrictNannyRelease`
+  const account=i?.account===String.raw`CORTANA\\StrictNannyRelease`
     ? String.raw`CORTANA\StrictNannyRelease` : i?.account;
   return {id:String(d.id),owner_user_id:String(d.owner_user_id),kind:i?.kind,
    registered:i?.registered,independently_attested:i?.independently_attested,
