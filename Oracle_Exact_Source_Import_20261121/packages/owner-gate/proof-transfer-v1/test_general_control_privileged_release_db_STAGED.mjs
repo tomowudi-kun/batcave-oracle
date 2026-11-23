@@ -167,12 +167,12 @@ test('identical concurrent privileged signatures have exactly one acceptance',as
 });
 test('old immutable release intent can never be substituted for new head',async()=>{
  const req=await create();
- await sql__BT__UPDATE batcave.change_gate_intents SET intent_key='batcave.general_control.pr3.owner_release_request.20261122'
-  WHERE intent_key=__D__{intentKey}__BT__;
+ await sql`UPDATE batcave.change_gate_intents SET intent_key='batcave.general_control.pr3.owner_release_request.20261122'
+  WHERE intent_key=${intentKey}`;
  const out=await handle({action:'general_control_privileged_release_prepare_v1',
   request_id:req.request_id},session,services,Date.now());
  assert.equal(out.status,'DENY');
- const count=await sql__BT__SELECT count(*)::int AS n FROM batcave.general_control_privileged_release_review_staged_v1__BT__;
+ const count=await sql`SELECT count(*)::int AS n FROM batcave.general_control_privileged_release_review_staged_v1`;
  assert.equal(count[0].n,0);
 });
 test('held-intent source switch after prepare prevents signed release',async()=>{
