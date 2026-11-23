@@ -43,7 +43,7 @@ before(async()=>{
  await sql.unsafe(readFileSync(ledger,'utf8'));
 });
 after(async()=>{await sql.end({timeout:2});});
-async function setup(){
+async function setup({legacyDoubleSeparator=false}={}){
  const pair=generateKeyPairSync('ed25519');
  const raw=pair.publicKey.export({type:'spki',format:'der'}).subarray(-32);
  const draft=randomUUID(),owner=randomUUID();
@@ -52,7 +52,9 @@ async function setup(){
   registered:false,independently_attested:false,production_release_authorized:false,
   execution_authorized:false,device:'Cortana',account:'CORTANA\\StrictNannyRelease',
   sid_from_owner_screenshot:'S-1-5-21-349890097-2052580754-4142396749-1004',
+  
   public_key_sha256_raw:keyhash,public_key_b64url_raw:keyb64};
+ if(legacyDoubleSeparator)intent.account='CORTANA'+'\\'.repeat(2)+'StrictNannyRelease';
  await sql`INSERT INTO batcave.oracle_instruction_drafts_v1
   (id,owner_user_id,source,source_message,interpreted_intent,risk_level,state,
    requires_independent_review,execution_authorized,dispatched_at,expires_at)
@@ -62,7 +64,7 @@ async function setup(){
  const observed=await getPrivateCandidate(draft,owner);
  assert.deepEqual(observed,{id:draft,owner_user_id:owner,kind:intent.kind,
  registered:false,independently_attested:false,production_release_authorized:false,
- execution_authorized:false,host:intent.device,account:intent.account,
+ execution_authorized:false,host:intent.device,account:'CORTANA\\StrictNannyRelease',
  sid:intent.sid_from_owner_screenshot,public_key_sha256_raw:intent.public_key_sha256_raw,
  public_key_b64url_raw:intent.public_key_b64url_raw},'Private PostgreSQL draft normalization changed');
  const session={authenticated_owner:true,owner_user_id:owner};
@@ -108,6 +110,14 @@ test('changed owner candidate state after challenge rejects signature',async()=>
  await sql`UPDATE batcave.oracle_instruction_drafts_v1 SET state='held'
  WHERE id=${x.draft}::uuid`;
  assert.equal((await record(x.proof,services)).status,'DENY');
+});
+test('old doubled Windows separator is canonicalized only for PoP; raw record remains immutable',async()=>{
+ const x=await setup({legacyDoubleSeparator:true});
+ const r=await record(x.proof,services);
+ assert.equal(r.status,'CANDIDATE_POSSESSION_RECORDED_ONLY',JSON.stringify(r));
+ assert.equal(r.independently_attested,false);
+ const rows=await sql`SELECT interpreted_intent->>'account' AS account FROM batcave.oracle_instruction_drafts_v1 WHERE id=${x.draft}::uuid`;
+ assert.equal(rows[0].account,'CORTANA'+'\\'.repeat(2)+'StrictNannyRelease');
 });
 test('public roles have no direct access to private possession receipts',async()=>{
  const r=await sql`SELECT
