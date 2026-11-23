@@ -83,4 +83,5 @@ jobs:
           (cd ../proof-transfer-v1 && node --test test_general_control_private_repository_STAGED.mjs)
           (cd ../proof-transfer-v1 && node --test test_general_control_rescope_private_repo_STAGED.mjs)
           (cd ../proof-transfer-v1 && node --test test_general_control_reviewer_full_db_STAGED.mjs)
+          (cd ../proof-transfer-v1 && node --test test_general_control_privileged_release_db_STAGED.mjs)
           python3 ../../general-control-v1/tests/test_command_recovery.py
