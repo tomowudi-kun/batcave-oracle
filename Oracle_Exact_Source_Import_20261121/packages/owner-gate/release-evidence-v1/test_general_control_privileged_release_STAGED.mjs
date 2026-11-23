@@ -36,6 +36,8 @@ const policy={current:true,capability_allowed:true,digest:request.policy_digest,
 function fixture(){
  const state={prepared:null,recorded:0,registration:{...reg},intent:{...intent},
  policy:{...policy},
+ trustedBinding:Object.fromEntries(['owner_user_id','device','target_origin','target_session_id',
+ 'command_digest','source_commit','policy_digest'].map(k=>[k,request[k]])),
  evidence:{request,owner_signature_state:'owner_signature_recorded_only',
  reviewer_signature_state:'reviewer_signature_recorded_only',
  owner_signature_hex:'1'.repeat(128),reviewer_signature_hex:'2'.repeat(128)}};
@@ -56,7 +58,8 @@ function fixture(){
   getCompleteSignedEvidence:async()=>state.evidence,
   getReviewerRegistration:async()=>state.registration,
   getHeldReleaseIntent:async()=>state.intent,
-  getCurrentPolicy:async()=>state.policy};
+  getCurrentPolicy:async()=>state.policy,
+  getTrustedBinding:async()=>state.trustedBinding};
  return {state,services};
 }
 const prepare={action:'general_control_privileged_release_prepare_v1',
@@ -146,6 +149,11 @@ test('forged signature, changed reviewer key and stale policy before record fail
  f.state.registration={...reg};f.state.policy={...policy,source_commit:'a'.repeat(40)};
  assert.equal((await handle(finish(x),session,f.services,now)).status,'DENY');
  assert.equal(f.state.recorded,0);
+});
+test('trusted binding is independent and a changed command digest denies release',async()=>{
+ const f=fixture();f.state.trustedBinding={...f.state.trustedBinding,command_digest:'f'.repeat(64)};
+ assert.equal((await handle(prepare,session,f.services,now)).status,'DENY');
+ assert.equal(f.state.prepared,null);
 });
 test('expiry, client authority flags, changed nonce and missing repository fail closed',async()=>{
  const f=fixture(),x=await challenge(f);
