@@ -59,6 +59,12 @@ async function setup(){
   VALUES(${draft}::uuid,${owner}::uuid,'chatgpt_owner_instruction','synthetic possession only',
    ${sql.json(intent)}::jsonb,'high','draft',true,false,NULL,
    (clock_timestamp()+interval '1 day'))`;
+ const observed=await getPrivateCandidate(draft,owner);
+ assert.deepEqual(observed,{id:draft,owner_user_id:owner,kind:intent.kind,
+ registered:false,independently_attested:false,production_release_authorized:false,
+ execution_authorized:false,host:intent.device,account:intent.account,
+ sid:intent.sid_from_owner_screenshot,public_key_sha256_raw:intent.public_key_sha256_raw,
+ public_key_b64url_raw:intent.public_key_b64url_raw},'Private PostgreSQL draft normalization changed');
  const session={authenticated_owner:true,owner_user_id:owner};
  const out=await issue({draft_id:draft},session,services);
  assert.equal(out.status,'AWAIT_EXPLICIT_KEY_POSSESSION_PROOF',JSON.stringify(out));
