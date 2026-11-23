@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS batcave.general_control_privileged_release_review_sta
  reviewer_key_hex text NOT NULL CHECK(reviewer_key_hex ~ '^[a-f0-9]{64}$'),
  source_commit text NOT NULL CHECK(source_commit ~ '^[a-f0-9]{40}$'),
  policy_sha256 text NOT NULL CHECK(policy_sha256 ~ '^[a-f0-9]{64}$'),
- intent_key text NOT NULL CHECK(intent_key='batcave.general_control.pr3.owner_release_request.20261122'),
+ intent_key text NOT NULL CHECK(intent_key='batcave.general_control.pr3.owner_release_request.v1.' || source_commit),
  intent_sha256 text NOT NULL CHECK(intent_sha256 ~ '^[a-f0-9]{64}$'),
  request_sha256 text NOT NULL CHECK(request_sha256 ~ '^[a-f0-9]{64}$'),
  signing_sha256 text NOT NULL CHECK(signing_sha256 ~ '^[a-f0-9]{64}$'),
