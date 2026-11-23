@@ -56,10 +56,16 @@ export function makeCandidatePossessionPrivateRepoSTAGED(sql){
      WHERE id=${id}::uuid AND owner_user_id=${owner}::uuid LIMIT 1`;
   const d=rows[0];if(!d||d.state!=='draft'||d.execution_authorized!==false)return null;
   const i=d.interpreted_intent;
+  // Preserve flag VALUES, never turn "is false" comparisons into true flags.
+  // One prior non-authorizing draft stored a Windows separator twice (5c5c);
+  // canonicalize ONLY that precise spelling for the purpose of PoP lookup.
+  // A username string is not trusted custody or attestation.
+  const account=i?.account===String.raw`CORTANA\\\\StrictNannyRelease`
+    ? String.raw`CORTANA\StrictNannyRelease` : i?.account;
   return {id:String(d.id),owner_user_id:String(d.owner_user_id),kind:i?.kind,
-   registered:i?.registered===false,independently_attested:i?.independently_attested===false,
-   production_release_authorized:i?.production_release_authorized===false,
-   execution_authorized:i?.execution_authorized===false,host:i?.device,account:i?.account,
+   registered:i?.registered,independently_attested:i?.independently_attested,
+   production_release_authorized:i?.production_release_authorized,
+   execution_authorized:i?.execution_authorized,host:i?.device,account,
    sid:i?.sid_from_owner_screenshot,public_key_sha256_raw:i?.public_key_sha256_raw,
    public_key_b64url_raw:i?.public_key_b64url_raw};
  };
