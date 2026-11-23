@@ -27,7 +27,7 @@ const reviewer='123e4567-e89b-42d3-a456-426614174009';
 const keys=generateKeyPairSync('ed25519');
 const pub=keys.publicKey.export({format:'der',type:'spki'}).subarray(-32).toString('hex');
 const host='f'.repeat(64),commit='b'.repeat(40),digest='c'.repeat(64);
-const intentKey='batcave.general_control.pr3.owner_release_request.20261122';
+const intentKey='batcave.general_control.pr3.owner_release_request.v1.'+commit;
 const intentHash='e'.repeat(64);
 const hexhash=s=>createHash('sha256').update(s).digest('hex');
 const session={reviewer_authenticated:true,protected_reviewer_session_verified:true,
@@ -164,6 +164,16 @@ test('identical concurrent privileged signatures have exactly one acceptance',as
   FROM batcave.general_control_privileged_release_review_staged_v1
   WHERE state='recorded'`;
  assert.equal(count[0].n,1);
+});
+test('old immutable release intent can never be substituted for new head',async()=>{
+ const req=await create();
+ await sql__BT__UPDATE batcave.change_gate_intents SET intent_key='batcave.general_control.pr3.owner_release_request.20261122'
+  WHERE intent_key=__D__{intentKey}__BT__;
+ const out=await handle({action:'general_control_privileged_release_prepare_v1',
+  request_id:req.request_id},session,services,Date.now());
+ assert.equal(out.status,'DENY');
+ const count=await sql__BT__SELECT count(*)::int AS n FROM batcave.general_control_privileged_release_review_staged_v1__BT__;
+ assert.equal(count[0].n,0);
 });
 test('held-intent source switch after prepare prevents signed release',async()=>{
  const req=await create(),c=await challenge(req);
