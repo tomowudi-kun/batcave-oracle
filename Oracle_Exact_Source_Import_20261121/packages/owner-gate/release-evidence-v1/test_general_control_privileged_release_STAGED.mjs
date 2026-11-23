@@ -15,7 +15,7 @@ const request={schema:'batcave.general_control.owner_request.v1',
  source_commit:'b'.repeat(40),policy_digest:'c'.repeat(64),
  nonce:'d'.repeat(32),issued_at:'2026-11-23T02:26:00.000Z',
  expires_at:'2026-11-23T02:30:00.000Z',rollback_ref:'none'};
-const intent={intent_key:'batcave.general_control.pr3.owner_release_request.20261122',
+const intent={intent_key:'batcave.general_control.pr3.owner_release_request.v1.'+request.source_commit,
  state:'held',content_sha256:'e'.repeat(64),
  valid_until:'2026-11-29T17:01:31.870Z',
  requested_scope:Object.fromEntries(
@@ -116,6 +116,11 @@ test('old fixed reviewer, revoked key or absent separate protected identity cann
   {...session,independent_identity_verified:false}]){
   assert.equal((await handle(prepare,s,fixture().services,now)).status,'DENY');
  }
+});
+test('legacy fixed-trial and unversioned general-control intents are rejected',async()=>{
+ const f=fixture();f.state.intent={...intent,intent_key:'batcave.general_control.pr3.owner_release_request.20261122'};
+ assert.equal((await handle(prepare,session,f.services,now)).status,'DENY');
+ assert.equal(f.state.prepared,null);
 });
 test('old release intent pinned to different source fails before challenge',async()=>{
  for(const change of [{state:'released'},
