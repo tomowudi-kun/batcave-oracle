@@ -6,7 +6,7 @@
  * Caller supplies exact server-issued, one-use challenge JSON path.
  */
 import {readFileSync,writeFileSync,existsSync,lstatSync} from 'node:fs';
-import {join,resolve} from 'node:path';
+import {join,resolve,basename} from 'node:path';
 import {hostname,platform,userInfo} from 'node:os';
 import {stdin,stdout,stderr,argv,env} from 'node:process';
 import {execFileSync} from 'node:child_process';
@@ -106,5 +106,5 @@ async function main(){
  stdout.write('PUBLIC_PROOF_JSON_START\n'+JSON.stringify(proof,null,2)+'\nPUBLIC_PROOF_JSON_END\n');
  stdout.write('POSSESSION_SIGNATURE_CREATED_LOCAL_ONLY — transfer public proof to private server verifier before challenge expires.\n');
 }
-if(argv[1]&&argv[1].endsWith('general_control_candidate_sign_possession_STAGED.mjs'))
+if(argv[1]&&basename(argv[1])==='general_control_candidate_sign_possession_STAGED.mjs')
  main().catch(e=>{stderr.write('DENIED: '+(e?.message||'UNKNOWN')+'\n');process.exitCode=1;});
