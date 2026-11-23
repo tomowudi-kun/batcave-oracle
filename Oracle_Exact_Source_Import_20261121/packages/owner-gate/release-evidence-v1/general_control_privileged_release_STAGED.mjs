@@ -59,15 +59,14 @@ function trustedReviewer(session,reg,now){
   reg.host_identity_sha256===session.host_identity_sha256&&
   iso(reg.valid_until)&&Date.parse(reg.valid_until)>now;
 }
-const binding=r=>Object.fromEntries(['owner_user_id','device','target_origin',
- 'target_session_id','command_digest','source_commit','policy_digest'].map(k=>[k,r[k]]));
 async function inspection(requestId,session,services,now){
  if(!UUID.test(requestId))throw Error('INVALID_REVIEW_REQUEST');
- const [evidence,reg,intent,policy]=await Promise.all([
+ const [evidence,reg,intent,policy,trustedBinding]=await Promise.all([
   services.getCompleteSignedEvidence(requestId),
   services.getReviewerRegistration(session.reviewer_identity_id),
   services.getHeldReleaseIntent(requestId),
-  services.getCurrentPolicy(requestId)
+  services.getCurrentPolicy(requestId),
+  services.getTrustedBinding(requestId)
  ]);
  if(!trustedReviewer(session,reg,now))throw Error('INDEPENDENT_ATTESTATION_REQUIRED');
  const req=evidence?.request;
@@ -82,7 +81,7 @@ async function inspection(requestId,session,services,now){
   policy.target_session_id!==req.target_session_id||
   policy.target_origin!==req.target_origin)
   throw Error('FRESH_POLICY_AND_TARGET_REQUIRED');
- const result=validateGeneralControlOwnerRequestV1(req,binding(req),now);
+ const result=validateGeneralControlOwnerRequestV1(req,trustedBinding,now);
  if(!H40.test(req.source_commit)||!H64.test(req.policy_digest)||
   intent?.intent_key!=='batcave.general_control.pr3.owner_release_request.20261122'||
   intent.state!=='held'||!H64.test(intent.content_sha256)||
@@ -103,7 +102,7 @@ export async function handlePrivilegedReleaseReviewSTAGED(body,session,services,
  if(!validReviewer(session)||!Number.isSafeInteger(now))
   return denied('PROTECTED_INDEPENDENT_REVIEWER_REQUIRED');
  if(!services||['getCompleteSignedEvidence','getReviewerRegistration','getHeldReleaseIntent',
-   'getCurrentPolicy'].some(k=>typeof services[k]!=='function')||
+   'getCurrentPolicy','getTrustedBinding'].some(k=>typeof services[k]!=='function')||
   !services.repository||
   ['reserve','getPrepared','recordSignature'].some(k=>typeof services.repository[k]!=='function'))
   return denied('PRIVATE_TRUST_RESOLVERS_REQUIRED');
