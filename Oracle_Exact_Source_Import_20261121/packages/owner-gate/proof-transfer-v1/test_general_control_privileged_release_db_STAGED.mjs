@@ -119,6 +119,12 @@ const record=c=>({action:'general_control_privileged_release_record_v1',
  request_id:c.challenge.request_id,nonce:c.challenge.nonce,
  signature_hex:signReview(c)});
 before(async()=>{
+ // Disposable PostgreSQL has no production change-gate intent by design.
+ // Create the minimal fixture explicitly; never use this against production.
+ await sql.unsafe('CREATE SCHEMA IF NOT EXISTS batcave');
+ await sql.unsafe(`CREATE TABLE IF NOT EXISTS batcave.change_gate_intents (
+  intent_key text PRIMARY KEY,state text,content_sha256 text,
+  valid_until timestamptz,requested_scope jsonb)`);
  for(const name of ['general_control_nonce_ledger_STAGED.sql',
   'general_control_owner_evidence_atomic_STAGED.sql',
   'general_control_challenge_repository_STAGED.sql',
