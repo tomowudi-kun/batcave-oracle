@@ -4,7 +4,7 @@
 -- The server MUST verify authenticated independent reviewer, registered
 -- independently attested active production key, Ed25519 signature over exact
 -- canonical request, owner receipt, fresh policy/session BEFORE this function.
--- Database checks durable equality and concurrency, NOT cryptographic truth.
+-- Database checks durable equality (including the immutable source pin) and concurrency, NOT cryptographic truth.
 CREATE TABLE IF NOT EXISTS batcave.general_control_reviewer_evidence_staged_v1 (
  request_id uuid PRIMARY KEY REFERENCES batcave.general_control_owner_evidence_staged_v1(request_id),
  owner_user_id uuid NOT NULL,
@@ -40,8 +40,14 @@ BEGIN
  JOIN batcave.general_control_owner_evidence_staged_v1 o
    ON o.request_id=n.request_id AND o.owner_user_id=n.owner_user_id
    AND o.nonce=n.nonce AND o.policy_sha256=n.policy_sha256
+ JOIN batcave.general_control_prepared_challenges_staged_v1 p
+   ON p.request_id=n.request_id AND p.owner_user_id=n.owner_user_id
+   AND p.nonce=n.nonce AND p.request_sha256=n.request_sha256
+   AND p.policy_sha256=n.policy_sha256
  WHERE n.request_id=p_request_id AND n.owner_user_id=p_owner_user_id
    AND n.nonce=p_nonce AND n.policy_sha256=p_policy_sha256
+   AND p.request_json->>'source_commit'=p_source_commit
+   AND p.request_json->>'policy_digest'=p_policy_sha256
    AND n.state='consumed' AND o.state='owner_signature_recorded_only'
  FOR UPDATE OF n;
  GET DIAGNOSTICS matched=ROW_COUNT;
