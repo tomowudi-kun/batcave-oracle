@@ -25,6 +25,7 @@ test('HARDEN-2: final envelope flags override downstream fields at BOTH boundari
  const returns=handler.match(/return Object\.freeze\(\{\.\.\.result,registered:false,[\s\S]*?grant_issued:false\}\);/g)||[];
  assert.equal(returns.length,2,'issue and record responses must seal all six flags after result spread');
  assert.match(edge,/JSON\.stringify\(\{\.\.\.body,\.\.\.flags\}\)/);
+ assert.match(edge,/from 'npm:@supabase\/server@1\.9\.2';/);
  assert.match(edge,/const flags=\{registered:false,independently_attested:false,[\s\S]*?production_release_authorized:false,execution_authorized:false,[\s\S]*?deployment_authorized:false,grant_issued:false\};/);
  assert.doesNotMatch(handler,/grant_issued:false,\.\.\.result/);
  assert.doesNotMatch(edge,/\{\.\.\.flags,\.\.\.body\}/);

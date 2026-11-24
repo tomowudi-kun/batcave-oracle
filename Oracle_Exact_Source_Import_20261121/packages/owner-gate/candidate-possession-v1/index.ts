@@ -2,7 +2,7 @@
  * Never replace batcave-change-gate-v1 or batcave-first-proof-v1.
  * Deploy with verify_jwt:true. No privileged release or general host control.
  */
-import {withSupabase} from 'npm:@supabase/server';
+import {withSupabase} from 'npm:@supabase/server@1.9.2';
 import postgres from 'npm:postgres@3.4.5';
 import {handleCandidatePossessionOnlySTAGED,OWNER_ID}
  from './handler_STAGED.mjs';
