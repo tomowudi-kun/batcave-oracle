@@ -12,14 +12,28 @@ const bytes=x=>Uint8Array.from(atob(x.replace(/-/g,'+').replace(/_/g,'/')+'='.re
 const hex=x=>Array.from(x,b=>b.toString(16).padStart(2,'0')).join('');
 async function digest(raw){return hex(new Uint8Array(await crypto.subtle.digest('SHA-256',te.encode(raw))));}
 function iso(s){return typeof s==='string'&&/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/.test(s)&&new Date(s).toISOString().replace('.000Z','Z')===s;}
-export function parseTrialRequest(raw,now=Date.now()){
+export function parseTrialReference(raw,now=Date.now()){
  must(typeof raw==='string'&&raw.length>=100&&raw.length<=2048,'Invalid public lab request.');
  const r=JSON.parse(raw);
  must(keys(r)===REQUEST_KEYS&&Object.values(r).every(x=>typeof x==='string'),'Invalid public lab request fields.');
  must(r.schema==='batcave.nanny.lab.request.v1'&&r.device==='Oracle'&&r.operation==='oracle_model_fixture_v1'&&r.scope==='disposable_lab_only'&&r.artifact_sha256===ARTIFACT,'The request is outside the fixed Oracle trial.');
  must(/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(r.request_id)&&/^[a-f0-9]{32}$/.test(r.nonce),'Invalid lab request identifiers.');
- must(iso(r.created_at)&&iso(r.expires_at)&&Date.parse(r.created_at)<=now+30000&&Date.parse(r.created_at)>=now-600000&&Date.parse(r.expires_at)>now&&Date.parse(r.expires_at)<=Date.parse(r.created_at)+600000,'This lab request expired. Keep the existing keys; request a fresh trial window.');
+ must(iso(r.created_at)&&iso(r.expires_at)&&Date.parse(r.created_at)<=now+30000&&Date.parse(r.expires_at)>Date.parse(r.created_at)&&Date.parse(r.expires_at)<=Date.parse(r.created_at)+600000,'Invalid lab request times.');
  return r;
+}
+export function parseTrialRequest(raw,now=Date.now()){
+ const r=parseTrialReference(raw,now);
+ must(Date.parse(r.created_at)>=now-600000&&Date.parse(r.expires_at)>now,'This lab request expired. Keep the existing keys; request a fresh trial window.');
+ return r;
+}
+export function labStatusMessage(s,request){
+ must(s?.schema==='batcave.oracle.lab.status.v1'&&s.read_only===true&&s.job_id===request.request_id&&s.nonce===request.nonce&&s.execution_authorized===false&&s.deployment_authorized===false,'Task status was not verified.');
+ if(s.state==='succeeded'&&s.completion_verified===true&&s.tests_passed===true&&s.tests_run===8&&s.attempt_count===1&&/^[a-f0-9]{64}$/.test(s.artifact_sha256||''))return 'Oracle completed this trial. All eight tests passed; the matching result receipt is recorded.';
+ if(s.state==='failed')return 'Oracle reported a failed trial. The saved result needs review before another attempt.';
+ if(s.state==='expired')return 'This request expired before completion was verified. Keep the existing keys; do not replay it.';
+ if(s.state==='queued')return 'Cortana review is recorded. Oracle has not started this task yet.';
+ if(s.state==='running')return 'Oracle is running this task. Completion will appear after its matching receipt is recorded.';
+ return 'Needs attention: completion is not verified. Keep this task for reconciliation; do not rerun it.';
 }
 export function buildLabRequestCommand(raw,now=Date.now()){
  const r=parseTrialRequest(raw,now),encoded=btoa(raw);
@@ -62,15 +76,30 @@ export function mountLabTrialHandoff(options){
  const encoded=typeof location==='undefined'?null:new URLSearchParams(location.search).get('model_trial_v1');
  if(!encoded)return null;
  const root=document.createElement('section');root.id='oracle-lab-trial';
- root.innerHTML='<h2>Run Oracle’s approved model trial</h2><p>Both release signatures are already recorded. Cortana’s existing reviewer checks this one fixed, disposable task.</p><button data-copy>Copy Cortana lab request</button><p data-note role="status" aria-live="polite"></p><label>Public Cortana lab review receipt<input type="file" accept="application/json,.json" aria-label="Public Cortana lab review receipt" data-file></label><label>Public lab receipt<textarea data-receipt rows="5" aria-label="Public lab receipt"></textarea></label><button data-send>Send Cortana lab review</button><p data-result role="status" aria-live="polite"></p>';
+ root.innerHTML='<h2>Oracle model trial</h2><p>Both release signatures are already recorded. Cortana’s existing reviewer checks this one fixed, disposable task.</p><button data-copy>Copy Cortana lab request</button><p data-note role="status" aria-live="polite"></p><label>Public Cortana lab review receipt<input type="file" accept="application/json,.json" aria-label="Public Cortana lab review receipt" data-file></label><label>Public lab receipt<textarea data-receipt rows="5" aria-label="Public lab receipt"></textarea></label><button data-send>Send Cortana lab review</button><button data-refresh>Refresh task result</button><p data-result role="status" aria-live="polite"></p>';
  options.parent.prepend(root);const q=s=>root.querySelector(s);let raw,request,busy=false,done=false;
- try{must(encoded.length<=3000&&/^[A-Za-z0-9_-]+$/.test(encoded),'Invalid trial link.');raw=new TextDecoder().decode(bytes(encoded));request=parseTrialRequest(raw);q('[data-note]').textContent='On Cortana, copy the request and paste it into PowerShell. No passphrase is required.';}
- catch(e){q('[data-note]').textContent=e.message;q('[data-copy]').disabled=true;q('[data-send]').disabled=true;return root;}
+ try{must(encoded.length<=3000&&/^[A-Za-z0-9_-]+$/.test(encoded),'Invalid trial link.');raw=new TextDecoder().decode(bytes(encoded));request=parseTrialReference(raw);try{parseTrialRequest(raw);q('[data-note]').textContent='On Cortana, copy the request and paste it into PowerShell. No passphrase is required.';}catch{q('[data-note]').textContent='This is an earlier request. Checking its saved result; a completed task does not need another approval.';q('[data-copy]').disabled=true;q('[data-send]').disabled=true;done=true;}}
+ catch(e){q('[data-note]').textContent=e.message;q('[data-copy]').disabled=true;q('[data-send]').disabled=true;q('[data-refresh]').disabled=true;return root;}
+ let statusBusy=false,timer=null;const until=Date.now()+600000;
+ const refresh=async()=>{
+  if(statusBusy)return;statusBusy=true;q('[data-refresh]').disabled=true;
+  try{
+   must(!!options.getOwnerId(),'Sign in with your existing Batcave account to check the saved result.');
+   const s=await options.api({action:'oracle_lab_job_status_v1',job_id:request.request_id,nonce:request.nonce});
+   q('[data-result]').textContent=labStatusMessage(s,request);
+   if(['succeeded','failed','expired'].includes(s.state)){if(timer)clearInterval(timer);done=true;q('[data-copy]').disabled=true;q('[data-send]').disabled=true;}
+  }catch(e){q('[data-result]').textContent='Completion not verified: '+e.message;}
+  finally{statusBusy=false;q('[data-refresh]').disabled=false;}
+ };
+ q('[data-refresh]').onclick=refresh;
+ timer=setInterval(()=>{if(Date.now()>=until||root.isConnected===false){clearInterval(timer);return;}if(document.visibilityState!=='hidden')refresh();},8000);
+ if(typeof window!=='undefined')window.addEventListener('pagehide',()=>clearInterval(timer),{once:true});
+ refresh();
  q('[data-copy]').onclick=async()=>{try{await navigator.clipboard.writeText(buildLabRequestCommand(raw));q('[data-note]').textContent='Copied. Paste into Cortana’s PowerShell window and press Enter.';}catch(e){q('[data-note]').textContent=e.message;}};
  q('[data-file]').onchange=async()=>{try{const f=q('[data-file]').files?.[0];must(f&&f.size<=4096,'Choose only the small public lab review receipt.');q('[data-receipt]').value=await f.text();q('[data-result]').textContent='Public receipt loaded. Select Send Cortana lab review.';}catch(e){q('[data-result]').textContent=e.message;}};
  q('[data-send]').onclick=async()=>{
   if(busy||done)return;busy=true;q('[data-send]').disabled=true;
-  try{must(!!options.getOwnerId(),'Sign in with your existing Batcave account in this tab.');must(q('[data-receipt]').value.length<=4096,'Public receipt is too large.');const body=await checkLabReceipt(raw,JSON.parse(q('[data-receipt]').value));const result=await options.api(body);must(result?.lab_review_recorded===true&&result.job_id===request.request_id&&result.grant_state==='pending_one_time_lease'&&result.execution_authorized===false&&result.deployment_authorized===false,'The owner gate did not confirm the one-use trial review.');done=true;q('[data-result]').textContent='Cortana review accepted. Waiting for Oracle’s eight-test result.';}
+  try{must(!!options.getOwnerId(),'Sign in with your existing Batcave account in this tab.');must(q('[data-receipt]').value.length<=4096,'Public receipt is too large.');const body=await checkLabReceipt(raw,JSON.parse(q('[data-receipt]').value));const result=await options.api(body);must(result?.lab_review_recorded===true&&result.job_id===request.request_id&&result.grant_state==='pending_one_time_lease'&&result.execution_authorized===false&&result.deployment_authorized===false,'The owner gate did not confirm the one-use trial review.');done=true;q('[data-result]').textContent='Cortana review accepted. Checking Oracle’s saved result.';await refresh();}
   catch(e){q('[data-result]').textContent=e.message;}
   finally{busy=false;q('[data-send]').disabled=done;}
  };

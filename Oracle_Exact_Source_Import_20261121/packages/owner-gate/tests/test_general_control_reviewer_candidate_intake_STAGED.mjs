@@ -1,0 +1,15 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {generateKeyPairSync,createHash} from 'node:crypto';
+import {parsePublicReviewerCandidateV1 as parse} from '../src/general_control_reviewer_candidate_intake_STAGED.mjs';
+const {publicKey}=generateKeyPairSync('ed25519');
+const der=publicKey.export({format:'der',type:'spki'});
+const trusted={device:'Cortana',account:'CORTANA\\StrictNannyReviewer',sid:'S-1-5-21-349890097-2052580754-4142396749-1003'};
+const base={schema:'batcave.general_control.reviewer_candidate.v1',purpose:'general_control_privileged_reviewer',...trusted,public_key_spki_der_b64:der.toString('base64'),public_key_sha256:createHash('sha256').update(der).digest('hex'),independently_attested:false,production_authorized:false};
+const run=(patch={},binding=trusted)=>parse(JSON.stringify({...base,...patch}),binding);
+test('valid public candidate is non-authorizing',()=>{const x=run();assert.equal(x.execution_authorized,false);assert.equal(x.production_authorized,false);assert.equal(x.independently_attested,false)});
+test('rejects malformed and extra fields',()=>{assert.throws(()=>parse('{',trusted));assert.throws(()=>run({private_key:'secret'}));assert.throws(()=>parse('[]',trusted))});
+test('rejects wrong device/account/SID',()=>{for(const p of [{device:'Oracle'},{account:'CORTANA\\tomo'},{sid:'S-1-5-21-other'}])assert.throws(()=>run(p))});
+test('rejects false claims of attestation or authorization',()=>{assert.throws(()=>run({independently_attested:true}));assert.throws(()=>run({production_authorized:true}))});
+test('rejects changed fingerprint and invalid key',()=>{assert.throws(()=>run({public_key_sha256:'0'.repeat(64)}));assert.throws(()=>run({public_key_spki_der_b64:Buffer.alloc(44).toString('base64')}))});
+test('rejects mismatched trusted custody context',()=>{assert.throws(()=>run({}, {...trusted,account:'OTHER'}));assert.throws(()=>parse(JSON.stringify(base),{}))});

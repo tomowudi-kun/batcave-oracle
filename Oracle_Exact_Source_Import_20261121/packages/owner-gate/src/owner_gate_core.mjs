@@ -5,6 +5,7 @@
  */
 import {verifyOwnerEnrollmentV2,DOMAIN,REVIEWER_KEY,FIXTURE_TOKEN,RELEASE_SHA} from './verify_owner_enrollment_v2.mjs';
 import {verifyOracleLabReview} from './verify_lab_grant.mjs';
+import {readLabJobStatus} from './lab_job_status.mjs';
 const UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 const HEX32=/^[a-f0-9]{32}$/;
 function deny(error,status=403){return {status,body:{error,lab_only:true,execution_authorized:false,deployment_authorized:false}};}
@@ -17,6 +18,7 @@ function fpRecord(r){
 export async function handleOracleLabOwnerRequest(body,ctx,repo,now=Date.now(),verifyReview=verifyOracleLabReview){
  if(!mustOwner(ctx))return deny('OWNER_AUTH_REQUIRED',401);
  if(!body||typeof body!=='object'||Array.isArray(body)||typeof body.action!=='string')return deny('BAD_BODY',422);
+ if(body.action==='oracle_lab_job_status_v1')return readLabJobStatus(body,ctx,repo,now);
  if(body.action==='oracle_lab_enroll_challenge_v2'){
   if(!keyset(body,'action'))return deny('BAD_BODY',422);
   const ownerKey=await repo.getOwnerKey(ctx.owner_user_id);
@@ -44,7 +46,18 @@ export async function handleOracleLabOwnerRequest(body,ctx,repo,now=Date.now(),v
    if(pub.type!=='public')throw Error('key');
   }catch{return deny('PUBLIC_KEY_PIN_MISMATCH');}
   const receipt=await repo.enrollVerifiedReviewer({challenge_id:body.challenge_id,owner_user_id:ctx.owner_user_id,request:body.request,signature_b64url:body.signature_b64url,public_record:body.public_record,expected_release_sha256:RELEASE_SHA});
-  if(!receipt?.inserted)return deny('DUPLICATE_OR_EXPIRED_ENROLLMENT',409);
+  if(!receipt?.inserted){
+   // Authentication, owner signature, and public SPKI were already verified above.
+   // Surface only a fixed reason and sanitized SQLSTATE; never disclose credentials.
+   const permitted=['invalid_record','challenge_unmatched','db_error'];
+   const reason=permitted.includes(receipt?.reason)?receipt.reason:'unclassified';
+   const sqlstate=/^[A-Z0-9]{5}$/.test(String(receipt?.sqlstate||''))?receipt.sqlstate:'unknown';
+   // Return only an allowlisted failed field name, never field values or user identifiers.
+   const allowedChecks=['owner_null','challenge_null','nonce_invalid','signature_invalid','record_type_invalid','role_invalid','host_invalid','sid_invalid','key_invalid','prod_invalid','cloud_invalid'];
+   const failedField=reason==='invalid_record' && receipt?.checks && allowedChecks.find(k=>receipt.checks[k]===true);
+   const suffix=reason==='db_error'?'_'+sqlstate:(failedField?'_'+failedField.toUpperCase():'');
+   return deny('LAB_ENROLLMENT_'+reason.toUpperCase()+suffix,409);
+  }
   return {status:200,body:{enrollment_recorded:true,reviewer_key_sha256:REVIEWER_KEY,lab_only:true,execution_authorized:false,deployment_authorized:false}};
  }
  if(body.action==='oracle_lab_record_review_v2'){
