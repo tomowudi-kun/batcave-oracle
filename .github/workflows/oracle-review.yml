@@ -89,3 +89,16 @@ jobs:
           (cd ../proof-transfer-v1 && node --test test_general_control_privileged_release_db_STAGED.mjs)
           (cd ../proof-transfer-v1 && node --test test_general_control_candidate_possession_full_db_STAGED.mjs)
           python3 ../../general-control-v1/tests/test_command_recovery.py
+
+  # Source-only verification. No run, deploy, secrets, Supabase API calls, or production writes.
+  candidate-deno-check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check existing staged Supabase Edge entrypoint (no runtime invocation)
+        run: deno check Oracle_Exact_Source_Import_20261121/packages/owner-gate/candidate-possession-v1/index.ts
