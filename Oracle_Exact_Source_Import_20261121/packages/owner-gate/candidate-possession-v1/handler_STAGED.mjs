@@ -19,9 +19,9 @@ export async function handleCandidatePossessionOnlySTAGED(body,owner,services,no
  if(exact(body,['op','draft_id'])&&body.op==='issue'&&body.draft_id===DRAFT_ID){
   const result=await issuePossessionChallengeSTAGED(
    {draft_id:DRAFT_ID},owner,services,now);
-  return Object.freeze({registered:false,independently_attested:false,
+  return Object.freeze({...result,registered:false,independently_attested:false,
    production_release_authorized:false,execution_authorized:false,
-   deployment_authorized:false,grant_issued:false,...result});
+   deployment_authorized:false,grant_issued:false});
  }
  if(exact(body,['op','proof'])&&body.op==='record'){
   const p=body.proof;
@@ -35,9 +35,9 @@ export async function handleCandidatePossessionOnlySTAGED(body,owner,services,no
       stored?.payload?.owner_user_id!==OWNER_ID)
     return no('WRONG_OR_UNISSUED_CHALLENGE');
    const result=await recordPossessionProofSTAGED(p,services,now);
-   return Object.freeze({registered:false,independently_attested:false,
+   return Object.freeze({...result,registered:false,independently_attested:false,
     production_release_authorized:false,execution_authorized:false,
-    deployment_authorized:false,grant_issued:false,...result});
+    deployment_authorized:false,grant_issued:false});
   }catch{return no('PROOF_UNAVAILABLE');}
  }
  return no('UNSUPPORTED_OR_UNSCOPED_ACTION');

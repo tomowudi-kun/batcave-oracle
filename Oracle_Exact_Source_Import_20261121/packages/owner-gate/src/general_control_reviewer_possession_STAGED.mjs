@@ -4,6 +4,7 @@
  * Services/repository must be private server-resolved, NEVER from client claims.
  */
 import {createHash,createPublicKey,randomBytes,randomUUID,verify} from 'node:crypto';
+import {Buffer} from 'node:buffer';
 export const POP_SCHEMA='batcave.general_control.reviewer_possession_challenge.v1';
 export const POP_DOMAIN='BATCAVE_GENERAL_CONTROL_CANDIDATE_POSSESSION_ONLY_V1\n';
 const PROOF_SCHEMA='batcave.general_control.reviewer_possession_proof.v1';

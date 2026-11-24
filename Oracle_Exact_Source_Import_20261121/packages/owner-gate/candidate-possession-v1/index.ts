@@ -16,7 +16,7 @@ const flags={registered:false,independently_attested:false,
  production_release_authorized:false,execution_authorized:false,
  deployment_authorized:false,grant_issued:false};
 const reply=(body:Record<string,unknown>,status=200)=>
- new Response(JSON.stringify({...flags,...body}),{
+ new Response(JSON.stringify({...body,...flags}),{
   status,headers:{'content-type':'application/json; charset=utf-8',
    'cache-control':'no-store','x-content-type-options':'nosniff',
    'access-control-allow-origin':ORIGIN,'vary':'Origin'}});
